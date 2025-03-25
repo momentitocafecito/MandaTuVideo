@@ -1,13 +1,40 @@
+// ======== FUNCIÓN AUXILIAR PARA DECODIFICAR JWT ========
+function parseJwt(token) {
+  const base64Url = token.split('.')[1];
+  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+  const jsonPayload = decodeURIComponent(window.atob(base64)
+    .split('')
+    .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+    .join(''));
+  return JSON.parse(jsonPayload);
+}
+
+// ======== FUNCIONES DE LOGIN CON GOOGLE ========
+// Esta función será llamada automáticamente al recibir la respuesta de Google Identity Services.
+// function handleCredentialResponse(response) {
+//   // "response.credential" es el token JWT devuelto por Google
+//   console.log("Credenciales recibidas:", response.credential);
+
+//   // Aquí podrías procesar el token JWT o extraer el email del usuario si deseas
+//   console.log("Usuario autenticado:", response);
+
+//   // Ocultamos la sección de login y mostramos el contenido principal
+//   document.getElementById("loginSection").style.display = "none";
+//   document.getElementById("mainContent").style.display = "block";
+// }
 // ======== FUNCIONES DE LOGIN CON GOOGLE ========
 // Esta función será llamada automáticamente al recibir la respuesta de Google Identity Services.
 function handleCredentialResponse(response) {
-  // "response.credential" es el token JWT devuelto por Google
   console.log("Credenciales recibidas:", response.credential);
 
-  // Aquí podrías procesar el token JWT o extraer el email del usuario si deseas
-  console.log("Usuario autenticado:", response);
+  // Decodificar token JWT y obtener email del usuario
+  const tokenPayload = parseJwt(response.credential);
+  console.log("Usuario autenticado:", tokenPayload);
 
-  // Ocultamos la sección de login y mostramos el contenido principal
+  // Almacenar el email en variable global
+  window.loggedInUserEmail = tokenPayload.email || "usuario_desconocido";
+
+  // Ocultar sección de login y mostrar contenido principal
   document.getElementById("loginSection").style.display = "none";
   document.getElementById("mainContent").style.display = "block";
 }
@@ -211,16 +238,65 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // ============ FUNCIÓN PARA MANDAR EL JSON A GITHUB (VÍA NETLIFY) ============
+// function sendDialogToGitHub(finalMessage) {
+//   // 1) Referencia a nuestro contenedor de debug
+//   const debugInfo = document.getElementById("debugInfo");
+
+//   // Podemos obtener el email real si lo extraemos de response.credential decodificando el JWT.
+//   // Por simplicidad, un valor fijo:
+//   const usuario = "usuario@gmail.com";
+//   const momento = new Date().toISOString();
+
+//   // Construimos el payload que enviaremos al backend
+//   const payload = {
+//     usuario,
+//     momento,
+//     contenido: finalMessage,
+//     otros: {
+//       ip: "127.0.0.1",
+//       note: "Información adicional"
+//     }
+//   };
+
+//   // 2) Mostramos el payload en nuestro debugInfo ANTES de enviar
+//   debugInfo.innerText = "Enviando payload:\n\n" + JSON.stringify(payload, null, 2);
+
+//   // 3) Hacemos POST a la función serverless en Netlify
+//   fetch("/.netlify/functions/saveDialog", {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify(payload)
+//   })
+//   .then(res => res.json())
+//   .then(data => {
+//     // 4) Mostramos la respuesta en debugInfo
+//     debugInfo.innerText += "\n\nRespuesta:\n\n" + JSON.stringify(data, null, 2);
+
+//     if (data.error) {
+//       // Si la función te envía { error: "...", details: "..." }, mostramos todo
+//       alert("Hubo un error guardando el archivo: " + data.error);
+
+//       if (data.details) {
+//         debugInfo.innerText += "\n\nDetalles del error:\n" + data.details;
+//       }
+//     } else {
+//       alert("¡Tu archivo JSON fue guardado con éxito en GitHub!");
+//     }
+//   })
+//   .catch(err => {
+//     console.error("Error en la petición:", err);
+//     debugInfo.innerText += "\n\nError en la petición:\n" + err;
+//     alert("Error desconocido al guardar.");
+//   });
+// }
+// ============ FUNCIÓN PARA MANDAR EL JSON A GITHUB (VÍA NETLIFY) ============
 function sendDialogToGitHub(finalMessage) {
-  // 1) Referencia a nuestro contenedor de debug
   const debugInfo = document.getElementById("debugInfo");
 
-  // Podemos obtener el email real si lo extraemos de response.credential decodificando el JWT.
-  // Por simplicidad, un valor fijo:
-  const usuario = "usuario@gmail.com";
+  // Ahora se obtiene correctamente el email real del usuario que inició sesión
+  const usuario = window.loggedInUserEmail || "usuario_desconocido";
   const momento = new Date().toISOString();
 
-  // Construimos el payload que enviaremos al backend
   const payload = {
     usuario,
     momento,
@@ -231,10 +307,10 @@ function sendDialogToGitHub(finalMessage) {
     }
   };
 
-  // 2) Mostramos el payload en nuestro debugInfo ANTES de enviar
+  // Mostrar payload en debugInfo antes del envío
   debugInfo.innerText = "Enviando payload:\n\n" + JSON.stringify(payload, null, 2);
 
-  // 3) Hacemos POST a la función serverless en Netlify
+  // Enviar a Netlify
   fetch("/.netlify/functions/saveDialog", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -242,15 +318,11 @@ function sendDialogToGitHub(finalMessage) {
   })
   .then(res => res.json())
   .then(data => {
-    // 4) Mostramos la respuesta en debugInfo
     debugInfo.innerText += "\n\nRespuesta:\n\n" + JSON.stringify(data, null, 2);
-
     if (data.error) {
-      // Si la función te envía { error: "...", details: "..." }, mostramos todo
       alert("Hubo un error guardando el archivo: " + data.error);
-
       if (data.details) {
-        debugInfo.innerText += "\n\nDetalles del error:\n" + data.details;
+        debugInfo.innerText += "\n\nDetalles del error:\n" + JSON.stringify(data.details, null, 2);
       }
     } else {
       alert("¡Tu archivo JSON fue guardado con éxito en GitHub!");
