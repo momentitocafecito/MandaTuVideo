@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mi Login con Google</title>
+  <!-- Script de Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <!-- SECCIÓN DE LOGIN -->
+  <div id="loginSection">
+    <h2>Inicia sesión con tu cuenta de Gmail</h2>
+
+    <div id="g_id_onload"
+         data-client_id="628846595448-fe3e6kbmuljmc7v815dit1ghoq40n74q.apps.googleusercontent.com"
+         data-context="signin"
+         data-ux_mode="popup"
+         data-callback="handleCredentialResponse"
+         data-auto_prompt="false">
+    </div>
+
+    <div class="g_id_signin"
+         data-type="standard">
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL: se mostrará solo luego del login -->
+  <div id="mainContent" style="display: none;">
+    <h1>Crear Escenas y Diálogos</h1>
+
+    <!-- CONTENEDOR PRINCIPAL DE ESCENAS -->
+    <div id="scenesContainer">
+      <!-- Se agregarán las escenas de forma dinámica -->
+    </div>
+
+    <!-- BOTÓN PARA AGREGAR NUEVA ESCENA -->
+    <button id="addSceneBtn">Agregar Nueva Escena (+)</button>
+    <br><br>
+
+    <!-- BOTÓN PARA ENVIAR TODO EL CONTENIDO -->
+    <button id="sendAllBtn">Enviar</button>
+
+    <!-- SECCIÓN DE LOGS: Vista previa del mensaje a enviar -->
+    <div id="logSection">
+      <h2>Vista previa del mensaje a enviar:</h2>
+      <pre id="logContent"></pre>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <!-- Catálogos -->
+  <script src="js/catalogs.js"></script>
+  <!-- Lógica Principal -->
+  <script src="js/main.js"></script>
+</body>
+</html>
