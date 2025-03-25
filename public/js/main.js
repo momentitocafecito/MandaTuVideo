@@ -216,3 +216,36 @@ function handleCredentialResponse(response) {
     addSceneBtn.click();
   });
   
+
+  function sendDataToGitHub() {
+    // Supongamos que ya tienes la info del usuario, diálogos, etc.
+    const payload = {
+      usuario: "usuario@gmail.com",
+      momento: new Date().toISOString(),
+      contenido: "Aquí el texto con las escenas y diálogos...",
+      otros: {
+        ip: "127.0.0.1",
+        custom: "lo que necesites..."
+      }
+    };
+  
+    fetch("/.netlify/functions/saveDialog", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log("Respuesta de la serverless function:", data);
+      if (data.error) {
+        alert("Hubo un error guardando el archivo.");
+      } else {
+        alert("¡Datos guardados en GitHub con éxito!");
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error en la petición");
+    });
+  }
+  
