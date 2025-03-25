@@ -2,9 +2,10 @@
 const fetch = (...args) =>
     import('node-fetch').then(({ default: fetch }) => fetch(...args));
   
+  // Exportamos nuestra función para Netlify
   exports.handler = async (event) => {
     try {
-      // Verificar método HTTP
+      // Aceptamos solo POST
       if (event.httpMethod !== 'POST') {
         return {
           statusCode: 405,
@@ -12,46 +13,54 @@ const fetch = (...args) =>
         };
       }
   
-      // 1. Parsear el cuerpo enviado desde el front
+      // Parseamos el cuerpo JSON que nos manda el front-end
       const body = JSON.parse(event.body);
   
-      // 2. Construir el contenido que guardaremos
+      // Extraemos los datos (puedes ajustar según lo que envíes desde el front)
+      const usuario = body.usuario || "usuario_desconocido";
+      const momento = body.momento || new Date().toISOString();
+      const contenido = body.contenido || "Sin contenido";
+      const otros = body.otros || {};
+  
+      // Creamos el objeto que guardaremos en el .json
       const dataObj = {
-        usuario: body.usuario,
-        momento: body.momento,     // Ej: new Date().toISOString()
-        contenido: body.contenido, // El texto/diálogo
-        otros: body.otros || {}    // Cualquier info extra
-        // etc.
+        usuario,
+        momento,
+        contenido,
+        otros
+        // agrega más campos si lo deseas
       };
   
-      // 3. Convertir a base64 para la API de GitHub
+      // Convertimos a base64 para la API de GitHub
       const contentEncoded = Buffer.from(
         JSON.stringify(dataObj, null, 2)
       ).toString('base64');
   
-      // 4. Preparar la petición a la API de GitHub
-      const githubToken = process.env.GITHUB_TOKEN; // <--- leído desde variable de entorno
-      const owner = 'TU_USUARIO_GITHUB';            // Cambia a tu usuario/organización
-      const repo = 'TU_REPO';                       // Repo donde guardar data.json
-      const path = 'data.json';                     // Ruta del archivo en el repo
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-  
-      // Ver si el archivo ya existe (para obtener 'sha' y poder actualizarlo)
-      let sha = null;
-      const getRes = await fetch(url, {
-        headers: {
-          Authorization: `token ${githubToken}`,
-          Accept: 'application/vnd.github.v3+json'
-        }
-      });
-  
-      if (getRes.status === 200) {
-        const fileData = await getRes.json();
-        sha = fileData.sha;  // Lo usaremos en el PUT si ya existe el archivo
+      // Usamos el token de GitHub guardado en variables de entorno de Netlify
+      const githubToken = process.env.GITHUB_TOKEN;
+      if (!githubToken) {
+        return {
+          statusCode: 500,
+          body: JSON.stringify({
+            error: 'Falta el token de GitHub en las variables de entorno'
+          })
+        };
       }
   
-      // 5. Hacer PUT para crear/actualizar el archivo
-      const putRes = await fetch(url, {
+      // Definimos los parámetros de tu repo y la carpeta "dialog_data/"
+      const owner = 'momentitocafecito'; // Ajusta a tu usuario/organización
+      const repo = 'MandaTuVideo';            // Nombre de tu repositorio
+      const folder = 'dialog_data';      // Carpeta donde guardarás los archivos
+      // Construimos un nombre único de archivo, p.ej. "usuario_2025-03-25T15-00-00.json"
+      const normalizedTimestamp = momento.replace(/[:.]/g, '-'); 
+      const filename = `${usuario}_${normalizedTimestamp}.json`;
+  
+      // Ruta completa en GitHub
+      const path = `${folder}/${filename}`;
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+  
+      // Hacemos la petición PUT a la API de GitHub
+      const response = await fetch(url, {
         method: 'PUT',
         headers: {
           Authorization: `token ${githubToken}`,
@@ -59,16 +68,15 @@ const fetch = (...args) =>
           Accept: 'application/vnd.github.v3+json'
         },
         body: JSON.stringify({
-          message: 'Actualizando data.json con nuevo contenido',
-          content: contentEncoded,
-          sha: sha || undefined
+          message: `Guardando archivo ${filename}`, // Mensaje de commit
+          content: contentEncoded // El contenido base64
         })
       });
   
-      if (!putRes.ok) {
-        const errorData = await putRes.json();
+      if (!response.ok) {
+        const errorData = await response.json();
         return {
-          statusCode: putRes.status,
+          statusCode: response.status,
           body: JSON.stringify({
             error: 'Error al hacer PUT a GitHub',
             details: errorData
@@ -76,12 +84,12 @@ const fetch = (...args) =>
         };
       }
   
-      // Si todo sale bien
-      const result = await putRes.json();
+      // Todo bien
+      const result = await response.json();
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'Archivo data.json guardado con éxito en GitHub',
+          message: `Archivo ${filename} guardado con éxito en /${folder}/`,
           result
         })
       };
@@ -91,7 +99,7 @@ const fetch = (...args) =>
       return {
         statusCode: 500,
         body: JSON.stringify({
-          error: 'Error interno',
+          error: 'Error interno en la función serverless',
           details: error.toString()
         })
       };

@@ -217,16 +217,56 @@ function handleCredentialResponse(response) {
   });
   
 
-  function sendDataToGitHub() {
-    // Supongamos que ya tienes la info del usuario, diálogos, etc.
+  // function sendDataToGitHub() {
+  //   // Supongamos que ya tienes la info del usuario, diálogos, etc.
+  //   const payload = {
+  //     usuario: "usuario@gmail.com",
+  //     momento: new Date().toISOString(),
+  //     contenido: "Aquí el texto con las escenas y diálogos...",
+  //     otros: {
+  //       ip: "127.0.0.1",
+  //       custom: "lo que necesites..."
+  //     }
+  //   };
+  
+  //   fetch("/.netlify/functions/saveDialog", {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify(payload)
+  //   })
+  //   .then(res => res.json())
+  //   .then(data => {
+  //     console.log("Respuesta de la serverless function:", data);
+  //     if (data.error) {
+  //       alert("Hubo un error guardando el archivo.");
+  //     } else {
+  //       alert("¡Datos guardados en GitHub con éxito!");
+  //     }
+  //   })
+  //   .catch(err => {
+  //     console.error(err);
+  //     alert("Error en la petición");
+  //   });
+  // }
+  
+
+  function sendDialogToGitHub() {
+    // Supongamos que tienes los datos listos en variables
+    // Recolectadas de tu formulario o tu aplicación
+    const usuario = "juan.perez@gmail.com"; // obtenido del login con Google
+    const momento = new Date().toISOString();
+    const contenido = "Texto de escenas y diálogos...";
+    const otros = {
+      ip: "127.0.0.1",
+      extraNote: "Cualquier cosa más"
+    };
+  
+    // Construimos el payload
     const payload = {
-      usuario: "usuario@gmail.com",
-      momento: new Date().toISOString(),
-      contenido: "Aquí el texto con las escenas y diálogos...",
-      otros: {
-        ip: "127.0.0.1",
-        custom: "lo que necesites..."
-      }
+      usuario,
+      momento,
+      contenido,
+      otros
     };
   
     fetch("/.netlify/functions/saveDialog", {
@@ -238,14 +278,14 @@ function handleCredentialResponse(response) {
     .then(data => {
       console.log("Respuesta de la serverless function:", data);
       if (data.error) {
-        alert("Hubo un error guardando el archivo.");
+        alert("Hubo un error guardando el archivo: " + data.error);
       } else {
-        alert("¡Datos guardados en GitHub con éxito!");
+        alert("¡Tu archivo JSON fue guardado con éxito!");
       }
     })
     .catch(err => {
-      console.error(err);
-      alert("Error en la petición");
+      console.error("Error en la petición:", err);
+      alert("Error desconocido al guardar.");
     });
   }
   
