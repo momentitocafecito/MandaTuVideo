@@ -212,24 +212,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // ============ FUNCIÓN PARA MANDAR EL JSON A GITHUB (VÍA NETLIFY) ============
 function sendDialogToGitHub(finalMessage) {
-  // Puedes obtener el email real del usuario si lo extraes de response.credential
-  // Por simplicidad, pondremos algo fijo aquí.
+  // 1) Referencia a nuestro contenedor de debug
+  const debugInfo = document.getElementById("debugInfo");
+
+  // Podemos obtener el email real si lo extraemos de response.credential decodificando el JWT.
+  // Por simplicidad, un valor fijo:
   const usuario = "usuario@gmail.com";
   const momento = new Date().toISOString();
 
-  // Construimos el payload
+  // Construimos el payload que enviaremos al backend
   const payload = {
     usuario,
     momento,
     contenido: finalMessage,
     otros: {
-      // Si quieres agregar IP u otros datos
       ip: "127.0.0.1",
       note: "Información adicional"
     }
   };
 
-  // Hacemos POST a la función serverless en Netlify
+  // 2) Mostramos el payload en nuestro debugInfo ANTES de enviar
+  debugInfo.innerText = "Enviando payload:\n\n" + JSON.stringify(payload, null, 2);
+
+  // 3) Hacemos POST a la función serverless en Netlify
   fetch("/.netlify/functions/saveDialog", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -237,15 +242,23 @@ function sendDialogToGitHub(finalMessage) {
   })
   .then(res => res.json())
   .then(data => {
-    console.log("Respuesta de la serverless function:", data);
+    // 4) Mostramos la respuesta en debugInfo
+    debugInfo.innerText += "\n\nRespuesta:\n\n" + JSON.stringify(data, null, 2);
+
     if (data.error) {
-      alert("Hubo un error guardando el archivo: " + JSON.stringify(data.error));
+      // Si la función te envía { error: "...", details: "..." }, mostramos todo
+      alert("Hubo un error guardando el archivo: " + data.error);
+
+      if (data.details) {
+        debugInfo.innerText += "\n\nDetalles del error:\n" + data.details;
+      }
     } else {
       alert("¡Tu archivo JSON fue guardado con éxito en GitHub!");
     }
   })
   .catch(err => {
     console.error("Error en la petición:", err);
+    debugInfo.innerText += "\n\nError en la petición:\n" + err;
     alert("Error desconocido al guardar.");
   });
 }
