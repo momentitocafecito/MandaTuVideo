@@ -12,9 +12,9 @@ if (!fs.existsSync(DIR_PROCESSED)) {
 
 /**
  * Arrays de valores aleatorios:
- * - DURACIONES (3,4,5... segundos)
- * - ACCIONES (gestos aleatorios)
- * - PARENTESIS_EFFECTS (si es "PP", concatenamos el nombre del personaje)
+ * - DURACIONES
+ * - ACCIONES
+ * - PARENTESIS_EFFECTS (si "PP", concatena el nombre del personaje)
  */
 const DURACIONES = [
   '3 segundos',
@@ -38,7 +38,7 @@ const ACCIONES = [
 ];
 
 const PARENTESIS_EFFECTS = [
-  'PP',         
+  'PP',
   'PA-D*1.2',
   'PA-I*1.2',
   'ZI*1.5',
@@ -55,8 +55,7 @@ function pickRandom(array) {
 }
 
 /**
- * Divide un texto en renglones sin superar `maxLen` caracteres cada uno,
- * intentando distribuirlo de forma "equitativa".
+ * Divide un texto en renglones de forma equitativa, sin pasar de `maxLen` caracteres.
  */
 function splitTextEquitably(text, maxLen = 56) {
   if (text.length <= maxLen) {
@@ -99,9 +98,11 @@ function splitTextEquitably(text, maxLen = 56) {
 
 /**
  * ----------------------------------------------------------------------------
- * 1) Parsear el contenido en múltiples escenas.
- *    Cada escena se identificará por "=== Escena" y "Lugar:".
- *    Se guardan los personajes y sus diálogos en "dialogs".
+ * PARTE 1: Parsear el contenido en múltiples escenas.
+ *   - Identifica "=== Escena" para abrir una nueva escena
+ *   - "Lugar:" para el escenario
+ *   - "Personaje:" y "Diálogo:" para crear un objeto con { name, emotion, text }
+ *   - "Onomatopeya:" para agregar onomatopeya al diálogo actual (si la hay).
  * ----------------------------------------------------------------------------
  */
 function parseScenes(contenidoOriginal) {
@@ -113,6 +114,7 @@ function parseScenes(contenidoOriginal) {
   const scenes = [];
   let currentScene = null;
 
+  // Función para iniciar una escena nueva
   function startNewScene() {
     if (currentScene) {
       scenes.push(currentScene);
@@ -123,25 +125,30 @@ function parseScenes(contenidoOriginal) {
     };
   }
 
+  // Variable temporal: el último diálogo que estemos construyendo
+  // antes de añadirlo al array "dialogs" de la escena
   let tempPerson = null;
 
   lines.forEach(line => {
     const lower = line.toLowerCase();
 
+    // Nueva escena
     if (lower.startsWith('=== escena')) {
-      // Nueva escena
       startNewScene();
       return;
     }
+
+    // Lugar
     if (lower.startsWith('lugar:')) {
-      // "Lugar: Sala de estar"
       if (currentScene) {
         currentScene.place = line.replace(/lugar:\s*/i, '').trim();
       }
       return;
     }
+
+    // Personaje
     if (lower.startsWith('personaje:')) {
-      // Si había un personaje pendiente, lo guardamos
+      // Si quedaba un personaje pendiente, lo agregamos
       if (tempPerson) {
         currentScene.dialogs.push(tempPerson);
       }
@@ -158,44 +165,64 @@ function parseScenes(contenidoOriginal) {
         name = raw;
       }
 
-      tempPerson = { name, emotion, text: '' };
+      tempPerson = { name, emotion, text: '', onomatopeya: '' };
       return;
     }
+
+    // Diálogo
     if (lower.startsWith('diálogo:')) {
-      // Asociamos el diálogo al último personaje detectado
       if (!tempPerson) {
-        tempPerson = { name: 'Desconocido', emotion: 'Indefinida', text: '' };
+        tempPerson = { name: 'Desconocido', emotion: 'Indefinida', text: '', onomatopeya: '' };
       }
       const rawDialog = line.slice('diálogo:'.length).trim();
       tempPerson.text = rawDialog;
-      // Lo guardamos y reseteamos tempPerson
+      // De momento, no lo pusheamos aquí, pues
+      // podríamos encontrar la onomatopeya justo después
+      return;
+    }
+
+    // Onomatopeya
+    if (lower.startsWith('onomatopeya:')) {
+      // Asignamos la onomatopeya al personaje actual
+      if (!tempPerson) {
+        // si no hay tempPerson, creamos uno genérico
+        tempPerson = { name: 'Desconocido', emotion: 'Indefinida', text: '', onomatopeya: '' };
+      }
+      const rawOnoma = line.slice('onomatopeya:'.length).trim();
+      tempPerson.onomatopeya = rawOnoma;
+      // Ahora sí, este "bloque" (personaje+diálogo+onomatopeya) lo agregamos a dialogs
       currentScene.dialogs.push(tempPerson);
       tempPerson = null;
       return;
     }
-    // Ignoramos líneas de separación
+
+    // Ignorar separadores
     if (line.startsWith('---') || line.startsWith('---------')) {
       return;
     }
   });
 
-  // Si quedó un personaje pendiente
+  // Si quedó un personaje pendiente (sin onomatopeya)
   if (tempPerson && currentScene) {
     currentScene.dialogs.push(tempPerson);
+    tempPerson = null;
   }
-  // Guardar la última escena
+
+  // Guardamos la última escena
   if (currentScene) {
     scenes.push(currentScene);
   }
-  // Eliminamos escenas vacías
+
+  // Retornar solo escenas no vacías
   return scenes.filter(s => s.dialogs.length > 0 || s.place);
 }
 
 /**
  * ----------------------------------------------------------------------------
- * 2) Construir el script final a partir de las escenas parseadas.
+ * PARTE 2: Construir el script final a partir de las escenas parseadas.
  *    - "[Nombre] (duración | emoción | acción)"
- *    - Cada renglón del diálogo sin numeración, y con su propio paréntesis final.
+ *    - Cada renglón del diálogo => su propio paréntesis
+ *    - Al final del diálogo, si onomatopeya != "" => "OSD (onomatopeya) (PP personaje)"
  *    - Al final de cada escena: "**Lugar**"
  *    - Entre escenas: "---Cambio de escena---"
  * ----------------------------------------------------------------------------
@@ -204,7 +231,9 @@ function buildScript(scenes) {
   let output = '–Script–\n\n';
 
   scenes.forEach((scene, idxScene) => {
+    // Recorremos los diálogos
     scene.dialogs.forEach(dialog => {
+      // Cabecera
       const duracion = pickRandom(DURACIONES);
       const accion   = pickRandom(ACCIONES);
 
@@ -213,11 +242,9 @@ function buildScript(scenes) {
       // Dividimos el texto en renglones (máx 56 chars)
       const lines = splitTextEquitably(dialog.text, 56);
 
-      // Para cada renglón, se genera un PARENTESIS_EFFECTS aleatorio
-      // y si es "PP", se concatena el nombre del personaje
       lines.forEach(line => {
         const effect = pickRandom(PARENTESIS_EFFECTS);
-        let finalParenthesis = '';
+        let finalParenthesis;
         if (effect === 'PP') {
           finalParenthesis = `(PP ${dialog.name})`;
         } else {
@@ -225,6 +252,11 @@ function buildScript(scenes) {
         }
         output += `${line} ${finalParenthesis}\n`;
       });
+
+      // Si hay onomatopeya y no está vacía => agregamos la línea
+      if (dialog.onomatopeya && dialog.onomatopeya.trim().length > 0) {
+        output += `OSD (${dialog.onomatopeya}) (PP ${dialog.name})\n`;
+      }
 
       output += '\n';
     });
@@ -234,7 +266,7 @@ function buildScript(scenes) {
       output += `**${scene.place}**\n`;
     }
 
-    // Si no es la última escena, insertar cambio de escena
+    // Si no es la última escena => cambio de escena
     if (idxScene < scenes.length - 1) {
       output += `\n---Cambio de escena---\n\n`;
     }
@@ -263,7 +295,6 @@ function transformContent(contenidoOriginal) {
  * ----------------------------------------------------------------------------
  */
 function transformData(original) {
-  // Si no cumple la condición, regresamos null
   if (!original.otros) {
     return null;
   }
@@ -271,10 +302,9 @@ function transformData(original) {
     return null;
   }
 
-  // Ajustamos transformado en el original
+  // Marcamos el original como transformado
   original.otros.transformado = 'true';
 
-  // Campos requeridos
   const usuario   = original.usuario   || 'usuario_desconocido';
   const momento   = original.momento   || new Date().toISOString();
   const contenido = original.contenido || '';
@@ -289,10 +319,10 @@ function transformData(original) {
   const SS   = String(fechaObj.getUTCSeconds()).padStart(2, '0');
   const fechaStr = `${yyyy}${mm}${dd}${HH}${MM}${SS}`;
 
-  // Creamos el nuevo content
+  // Construimos el guion final
   const newContent = transformContent(contenido);
 
-  // Construimos el JSON transformado
+  // JSON transformado
   const transformed = {
     title:  `${usuario}_${fechaStr}_RENDERIZAR`,
     content: newContent,
@@ -302,9 +332,6 @@ function transformData(original) {
     otros: { ...original.otros }
   };
 
-  // Retornamos ambos objetos:
-  // - original, ya con "transformado: true"
-  // - transformed, con la nueva estructura
   return {
     original,
     transformed
@@ -313,12 +340,10 @@ function transformData(original) {
 
 /**
  * ----------------------------------------------------------------------------
- * 4) Proceso de archivos en dialog_data:
- *    - Leer .json
- *    - Llamar transformData
- *    - Si null => no se procesa
- *    - Si no => reescribir el archivo original (con transformado=true)
- *             y crear un archivo transformado en dialog_data_processed
+ * 4) Procesar los archivos en dialog_data:
+ *    - Solo se transforman si "otros.transformado === 'false'"
+ *    - Se reescribe el archivo original
+ *    - Se crea el transformado en dialog_data_processed
  * ----------------------------------------------------------------------------
  */
 const files = fs.readdirSync(DIR_UNPROCESSED);
@@ -330,9 +355,7 @@ files.forEach(fileName => {
   const raw = fs.readFileSync(filePath, 'utf8');
 
   try {
-    // Parseamos
     const originalJson = JSON.parse(raw);
-    // Transformamos
     const result = transformData(originalJson);
 
     if (result === null) {
@@ -340,7 +363,7 @@ files.forEach(fileName => {
       return;
     }
 
-    // 1) Sobrescribir el original con "transformado=true"
+    // 1) Sobrescribir el archivo original con transformado=true
     fs.writeFileSync(filePath, JSON.stringify(result.original, null, 2));
     console.log(`Actualizado original: ${filePath}`);
 
@@ -349,7 +372,6 @@ files.forEach(fileName => {
     fs.writeFileSync(outputPath, JSON.stringify(result.transformed, null, 2));
     console.log(`Generado transformado: ${outputPath}`);
 
-    // Importante: ya NO se borra el original
   } catch (err) {
     console.error(`Error procesando ${fileName}:`, err);
   }
