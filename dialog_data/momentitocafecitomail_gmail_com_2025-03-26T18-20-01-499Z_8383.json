@@ -1,0 +1,10 @@
+{
+  "usuario": "momentitocafecitomail@gmail.com",
+  "momento": "2025-03-26T18:20:01.499Z",
+  "contenido": "=== Escena #1 ===\nLugar: Sala de estar\n\nPersonaje: Ana | Emoción: Feliz\nDiálogo: Comida muy buena para hacer bien la digestión, este mensaje es solo para probar lo de los 56 caracteres\n\nPersonaje: Carlos | Emoción: Feliz\nDiálogo: Camión\n\n-----------------------------\n\n=== Escena #2 ===\nLugar: Oficina\n\nPersonaje: Ana | Emoción: Feliz\nDiálogo: sololoquio\n\nPersonaje: Lucia | Emoción: Feliz\nDiálogo: Comida muy buena para hacer bien la digestión, este mensaje es solo para probar lo de los 56 caracteres otra vez, veamos qué tal\n\n-----------------------------\n\n",
+  "otros": {
+    "ip": "127.0.0.1",
+    "note": "Información adicional",
+    "transformado": "true"
+  }
+}
