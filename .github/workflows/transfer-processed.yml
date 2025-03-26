@@ -1,0 +1,56 @@
+name: Transfer processed JSON to MAAS Secure
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dialog_data_processed/**'
+  workflow_dispatch:
+
+jobs:
+  copy-to-maas:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current repo
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          persist-credentials: false
+
+      - name: Identify changed files in dialog_data_processed
+        id: diff
+        run: |
+          git fetch --depth=2
+          # Solo archivos agregados (A)
+          git diff --name-only --diff-filter=A HEAD^ HEAD -- dialog_data_processed/ > changed_files.txt
+          echo "Changed files:"
+          cat changed_files.txt
+
+      - name: Check out external repo (Secure)
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ secrets.EXTERNAL_REPO }}  # Ej.: "jcval94chat/MAAS"
+          token: ${{ secrets.EXTERNAL_PAT }}
+          path: external_repo
+          persist-credentials: false
+
+      - name: Copy new processed files to external repo
+        run: |
+          while read file; do
+            [ -z "$file" ] && continue
+            cp "$file" external_repo/${{ secrets.EXTERNAL_TARGET_PATH }}
+          done < changed_files.txt
+
+      - name: Commit and push changes to external repo
+        run: |
+          cd external_repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ${{ secrets.EXTERNAL_TARGET_PATH }}
+          git commit -m "Auto-transfer new processed JSON file(s)" || echo "No changes to commit"
+          git remote set-url origin https://x-access-token:${{ secrets.EXTERNAL_PAT }}@github.com/${{ secrets.EXTERNAL_REPO }}.git
+          git push origin HEAD:${{ secrets.EXTERNAL_BRANCH }}
