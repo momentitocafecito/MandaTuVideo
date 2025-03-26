@@ -5,14 +5,16 @@ const path = require('path');
 const DIR_UNPROCESSED = path.join(__dirname, '..', 'dialog_data');
 const DIR_PROCESSED   = path.join(__dirname, '..', 'dialog_data_processed');
 
-// Aseguramos que la carpeta de salida existe
+// Aseguramos que exista la carpeta de salida
 if (!fs.existsSync(DIR_PROCESSED)) {
   fs.mkdirSync(DIR_PROCESSED);
 }
 
 /**
- * Arrays para generar valores aleatorios.
- * 'PP' significa que concatenará el nombre del personaje (ej: (PP Ana)).
+ * Arrays de valores aleatorios:
+ * - DURACIONES (3,4,5... segundos)
+ * - ACCIONES (gestos aleatorios)
+ * - PARENTESIS_EFFECTS (si es "PP", concatenamos el nombre del personaje)
  */
 const DURACIONES = [
   '3 segundos',
@@ -21,6 +23,7 @@ const DURACIONES = [
   '6 segundos',
   '7 segundos'
 ];
+
 const ACCIONES = [
   'Se inclina hacia la cámara',
   'Se frota los ojos',
@@ -33,8 +36,9 @@ const ACCIONES = [
   'Hace gestos con las manos',
   'Forza una sonrisa'
 ];
+
 const PARENTESIS_EFFECTS = [
-  'PP',
+  'PP',         
   'PA-D*1.2',
   'PA-I*1.2',
   'ZI*1.5',
@@ -51,8 +55,8 @@ function pickRandom(array) {
 }
 
 /**
- * Divide un texto en múltiples líneas de forma "equitativa",
- * sin superar 56 caracteres por línea.
+ * Divide un texto en renglones sin superar `maxLen` caracteres cada uno,
+ * intentando distribuirlo de forma "equitativa".
  */
 function splitTextEquitably(text, maxLen = 56) {
   if (text.length <= maxLen) {
@@ -60,10 +64,11 @@ function splitTextEquitably(text, maxLen = 56) {
   }
   const totalLength = text.length;
   const linesNeeded = Math.ceil(totalLength / maxLen);
-
-  // Objetivo aproximado de chars por línea
   let targetLen = Math.ceil(totalLength / linesNeeded);
-  if (targetLen > maxLen) targetLen = maxLen;
+
+  if (targetLen > maxLen) {
+    targetLen = maxLen;
+  }
 
   const words = text.split(/\s+/);
   const resultLines = [];
@@ -75,7 +80,7 @@ function splitTextEquitably(text, maxLen = 56) {
       currentLine = word;
       currentLen = word.length;
     } else {
-      const newLen = currentLen + 1 + word.length; // +1 por espacio
+      const newLen = currentLen + 1 + word.length;
       if (newLen > targetLen) {
         resultLines.push(currentLine);
         currentLine = word;
@@ -94,15 +99,9 @@ function splitTextEquitably(text, maxLen = 56) {
 
 /**
  * ----------------------------------------------------------------------------
- * PARTE 1: Parsear el contenido original en "escenas".
- * Cada escena tendrá:
- *  {
- *    place: 'Sala de estar',
- *    dialogs: [
- *      { name: 'Ana', emotion: 'Feliz', text: '...' },
- *      ...
- *    ]
- *  }
+ * 1) Parsear el contenido en múltiples escenas.
+ *    Cada escena se identificará por "=== Escena" y "Lugar:".
+ *    Se guardan los personajes y sus diálogos en "dialogs".
  * ----------------------------------------------------------------------------
  */
 function parseScenes(contenidoOriginal) {
@@ -114,9 +113,7 @@ function parseScenes(contenidoOriginal) {
   const scenes = [];
   let currentScene = null;
 
-  // Función auxiliar para "abrir" una nueva escena
   function startNewScene() {
-    // Si ya hay una escena en progreso, se guarda.
     if (currentScene) {
       scenes.push(currentScene);
     }
@@ -126,176 +123,147 @@ function parseScenes(contenidoOriginal) {
     };
   }
 
-  // Variable temporal para el último "personaje" detectado,
-  // antes de leer su "Diálogo:".
   let tempPerson = null;
 
   lines.forEach(line => {
     const lower = line.toLowerCase();
 
-    // Detectamos una nueva escena
     if (lower.startsWith('=== escena')) {
+      // Nueva escena
       startNewScene();
       return;
     }
-    // Detectamos el lugar
     if (lower.startsWith('lugar:')) {
+      // "Lugar: Sala de estar"
       if (currentScene) {
         currentScene.place = line.replace(/lugar:\s*/i, '').trim();
       }
       return;
     }
-    // Detectamos "Personaje: X | Emoción: Y"
     if (lower.startsWith('personaje:')) {
-      // Guardar si había un "tempPerson" pendiente
-      // (En este flujo, casi siempre iremos Personaje->Diálogo->Personaje->Diálogo)
+      // Si había un personaje pendiente, lo guardamos
       if (tempPerson) {
-        // Si no hubo diálogo, lo metemos igual
         currentScene.dialogs.push(tempPerson);
       }
-
-      let raw = line.slice('personaje:'.length).trim(); // quita "Personaje:"
+      let raw = line.slice('personaje:'.length).trim();
       let name = 'Desconocido';
       let emotion = 'Indefinida';
 
       // "Ana | Emoción: Feliz"
       if (raw.includes('| Emoción:')) {
         const [n, e] = raw.split('| Emoción:');
-        name = n.trim();
+        name    = n.trim();
         emotion = e.trim();
       } else {
-        // no hay "| Emoción:", sólo el nombre
         name = raw;
       }
 
-      tempPerson = {
-        name,
-        emotion,
-        text: '' // se llenará con "Diálogo:"
-      };
+      tempPerson = { name, emotion, text: '' };
       return;
     }
-    // Detectamos "Diálogo:"
     if (lower.startsWith('diálogo:')) {
+      // Asociamos el diálogo al último personaje detectado
       if (!tempPerson) {
-        // Personaje no definido, creamos uno genérico
         tempPerson = { name: 'Desconocido', emotion: 'Indefinida', text: '' };
       }
       const rawDialog = line.slice('diálogo:'.length).trim();
       tempPerson.text = rawDialog;
-      // Inmediatamente guardamos en la escena
+      // Lo guardamos y reseteamos tempPerson
       currentScene.dialogs.push(tempPerson);
-      tempPerson = null; // reset
+      tempPerson = null;
       return;
     }
-    // Líneas de separación ("---------------------"), las ignoramos
+    // Ignoramos líneas de separación
     if (line.startsWith('---') || line.startsWith('---------')) {
       return;
     }
-    // Cualquier otra cosa, la ignoramos
   });
 
-  // Si quedó un "tempPerson" pendiente, se guarda
+  // Si quedó un personaje pendiente
   if (tempPerson && currentScene) {
     currentScene.dialogs.push(tempPerson);
   }
-  // Guardamos la última escena en progreso
+  // Guardar la última escena
   if (currentScene) {
     scenes.push(currentScene);
   }
-
-  // Filtramos posibles escenas vacías
+  // Eliminamos escenas vacías
   return scenes.filter(s => s.dialogs.length > 0 || s.place);
 }
 
 /**
  * ----------------------------------------------------------------------------
- * PARTE 2: Construir el script final a partir de las escenas parseadas.
- * Se cumple:
- *  - Entre [] solo el nombre del personaje.
- *  - Al final de TODAS las líneas de diálogo (última línea) se añade el paréntesis extra.
- *  - Cada línea de diálogo se numera secuencialmente: 1., 2., 3., etc.
- *  - Al final de cada escena se coloca "**Lugar**".
- *  - Entre escenas se coloca "---Cambio de escena---".
+ * 2) Construir el script final a partir de las escenas parseadas.
+ *    - "[Nombre] (duración | emoción | acción)"
+ *    - Cada renglón del diálogo sin numeración, y con su propio paréntesis final.
+ *    - Al final de cada escena: "**Lugar**"
+ *    - Entre escenas: "---Cambio de escena---"
  * ----------------------------------------------------------------------------
  */
 function buildScript(scenes) {
-  let output = '–Script–\n\n';  // encabezado
-  scenes.forEach((scene, sceneIndex) => {
-    // Para cada diálogo dentro de la escena
+  let output = '–Script–\n\n';
+
+  scenes.forEach((scene, idxScene) => {
     scene.dialogs.forEach(dialog => {
-      // [Name] (duración | emoción | acción)
       const duracion = pickRandom(DURACIONES);
       const accion   = pickRandom(ACCIONES);
-      // "PP" => (PP Name), si no => (ZO*1.5) etc.
-      const effect  = pickRandom(PARENTESIS_EFFECTS);
 
-      // Preparamos la emoción (si no parseamos, Indefinida)
-      let emotion = dialog.emotion || 'Indefinida';
+      output += `[${dialog.name}] (${duracion} | ${dialog.emotion} | ${accion})\n`;
 
-      // Cabecera
-      output += `[${dialog.name}] (${duracion} | ${emotion} | ${accion})\n`;
+      // Dividimos el texto en renglones (máx 56 chars)
+      const lines = splitTextEquitably(dialog.text, 56);
 
-      // Dividimos el texto en líneas de hasta 56 caracteres
-      const splitted = splitTextEquitably(dialog.text, 56);
-
-      // Imprimimos cada línea enumerada
-      splitted.forEach((line, idx) => {
-        const lineNumber = idx + 1; // 1-based
-        if (idx < splitted.length - 1) {
-          // Líneas intermedias: "1. Blabla"
-          output += `${lineNumber}. ${line}\n`;
+      // Para cada renglón, se genera un PARENTESIS_EFFECTS aleatorio
+      // y si es "PP", se concatena el nombre del personaje
+      lines.forEach(line => {
+        const effect = pickRandom(PARENTESIS_EFFECTS);
+        let finalParenthesis = '';
+        if (effect === 'PP') {
+          finalParenthesis = `(PP ${dialog.name})`;
         } else {
-          // Última línea => añadir paréntesis extra
-          let finalParenthesis = '';
-          if (effect === 'PP') {
-            finalParenthesis = `(PP ${dialog.name})`;
-          } else {
-            finalParenthesis = `(${effect})`;
-          }
-          output += `${lineNumber}. ${line} ${finalParenthesis}\n\n`;
+          finalParenthesis = `(${effect})`;
         }
+        output += `${line} ${finalParenthesis}\n`;
       });
+
+      output += '\n';
     });
 
-    // Al final de la escena, ponemos "**Lugar**"
+    // Al final de la escena
     if (scene.place) {
       output += `**${scene.place}**\n`;
     }
 
-    // Si hay otra escena después, ponemos "---Cambio de escena---"
-    if (sceneIndex < scenes.length - 1) {
+    // Si no es la última escena, insertar cambio de escena
+    if (idxScene < scenes.length - 1) {
       output += `\n---Cambio de escena---\n\n`;
     }
   });
 
-  // Retornamos el resultado (sin "FIN", según tu ejemplo)
   return output.trim();
 }
 
 /**
  * ----------------------------------------------------------------------------
- * FUNCIÓN PRINCIPAL: transformContent
- * 1) Parseamos el contenido en múltiples escenas.
- * 2) Construimos el script final.
+ * 3) Función principal para crear el script final desde "contenido".
  * ----------------------------------------------------------------------------
  */
 function transformContent(contenidoOriginal) {
   const scenes = parseScenes(contenidoOriginal);
-  const finalScript = buildScript(scenes);
-  return finalScript;
+  return buildScript(scenes);
 }
 
 /**
  * ----------------------------------------------------------------------------
  * transformData:
- *  - Solo se procesa si "otros.transformado === 'false'".
- *  - Ajusta title, url, status, sendDate.
- *  - Llama a transformContent para generar el script final.
- *  - Marca "transformado" = "true".
+ *  - Solo se procesa si otros.transformado === "false".
+ *  - Retorna { original, transformed }:
+ *    - original: el mismo objeto con "transformado" => "true".
+ *    - transformed: el JSON final con title, content, etc.
  * ----------------------------------------------------------------------------
  */
 function transformData(original) {
+  // Si no cumple la condición, regresamos null
   if (!original.otros) {
     return null;
   }
@@ -303,11 +271,15 @@ function transformData(original) {
     return null;
   }
 
+  // Ajustamos transformado en el original
+  original.otros.transformado = 'true';
+
+  // Campos requeridos
   const usuario   = original.usuario   || 'usuario_desconocido';
   const momento   = original.momento   || new Date().toISOString();
   const contenido = original.contenido || '';
 
-  // Armamos la fecha en YYYYmmddHHMMSS
+  // Fecha en YYYYmmddHHMMSS
   const fechaObj = new Date(momento);
   const yyyy = fechaObj.getUTCFullYear();
   const mm   = String(fechaObj.getUTCMonth() + 1).padStart(2, '0');
@@ -317,13 +289,10 @@ function transformData(original) {
   const SS   = String(fechaObj.getUTCSeconds()).padStart(2, '0');
   const fechaStr = `${yyyy}${mm}${dd}${HH}${MM}${SS}`;
 
-  // Transformar el 'contenido' en el guion final
+  // Creamos el nuevo content
   const newContent = transformContent(contenido);
 
-  // Marcamos como transformado
-  original.otros.transformado = 'true';
-
-  // Construimos el objeto final
+  // Construimos el JSON transformado
   const transformed = {
     title:  `${usuario}_${fechaStr}_RENDERIZAR`,
     content: newContent,
@@ -333,15 +302,23 @@ function transformData(original) {
     otros: { ...original.otros }
   };
 
-  return transformed;
+  // Retornamos ambos objetos:
+  // - original, ya con "transformado: true"
+  // - transformed, con la nueva estructura
+  return {
+    original,
+    transformed
+  };
 }
 
 /**
  * ----------------------------------------------------------------------------
- * 3) Escanea la carpeta "dialog_data" en busca de archivos .json.
- *    - Sólo transforma los que tengan "otros.transformado === 'false'".
- *    - Guarda el resultado en "dialog_data_processed".
- *    - Elimina el original de "dialog_data".
+ * 4) Proceso de archivos en dialog_data:
+ *    - Leer .json
+ *    - Llamar transformData
+ *    - Si null => no se procesa
+ *    - Si no => reescribir el archivo original (con transformado=true)
+ *             y crear un archivo transformado en dialog_data_processed
  * ----------------------------------------------------------------------------
  */
 const files = fs.readdirSync(DIR_UNPROCESSED);
@@ -353,22 +330,26 @@ files.forEach(fileName => {
   const raw = fs.readFileSync(filePath, 'utf8');
 
   try {
+    // Parseamos
     const originalJson = JSON.parse(raw);
-    const transformedJson = transformData(originalJson);
+    // Transformamos
+    const result = transformData(originalJson);
 
-    // Si devolvió null => se omite
-    if (transformedJson === null) {
+    if (result === null) {
       console.log(`Omitiendo ${fileName}: no cumple "otros.transformado=false".`);
       return;
     }
 
-    // Guardamos en la carpeta de procesados
-    const outputPath = path.join(DIR_PROCESSED, fileName);
-    fs.writeFileSync(outputPath, JSON.stringify(transformedJson, null, 2));
-    console.log(`Generado: ${outputPath}`);
+    // 1) Sobrescribir el original con "transformado=true"
+    fs.writeFileSync(filePath, JSON.stringify(result.original, null, 2));
+    console.log(`Actualizado original: ${filePath}`);
 
-    // // Borramos el archivo original
-    // fs.unlinkSync(filePath);
+    // 2) Guardar el transformado en dialog_data_processed
+    const outputPath = path.join(DIR_PROCESSED, fileName);
+    fs.writeFileSync(outputPath, JSON.stringify(result.transformed, null, 2));
+    console.log(`Generado transformado: ${outputPath}`);
+
+    // Importante: ya NO se borra el original
   } catch (err) {
     console.error(`Error procesando ${fileName}:`, err);
   }
