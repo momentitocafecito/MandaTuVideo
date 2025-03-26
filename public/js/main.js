@@ -569,7 +569,8 @@ function sendDialogToGitHub(finalMessage) {
     contenido: finalMessage,
     otros: {
       ip: "127.0.0.1",
-      note: "Información adicional"
+      note: "Información adicional",
+      transformado: "false"
     }
   };
 
