@@ -1,0 +1,10 @@
+{
+  "usuario": "momentitocafecitomail@gmail.com",
+  "momento": "2025-03-26T16:02:30.798Z",
+  "contenido": "=== Escena #1 ===\nLugar: Sala de estar\n\nPersonaje: Ana | Emoción: Feliz\nDiálogo: Nuevo diálogo\n\n-----------------------------\n\n=== Escena #2 ===\nLugar: Cocina\n\nPersonaje: Carlos | Emoción: Feliz\nDiálogo: Así es, un nuevo diálogo con una nueva escena\n\n-----------------------------\n\n",
+  "otros": {
+    "ip": "127.0.0.1",
+    "note": "Información adicional",
+    "transformado": "false"
+  }
+}
