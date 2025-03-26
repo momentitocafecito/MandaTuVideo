@@ -35,8 +35,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add dialog_data_processed
+          # Agrega cambios tanto en dialog_data_processed como en dialog_data
+          git add dialog_data_processed dialog_data
           git commit -m "Auto-transform new JSON" || echo "No changes to commit"
-          # Actualiza la URL remota para incluir el token
+          # Actualiza la URL remota para usar el PAT
           git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/momentitocafecito/MandaTuVideo.git
           git push origin HEAD:$(git rev-parse --abbrev-ref HEAD)
