@@ -17,11 +17,11 @@ const PLACES_CATALOG = [
   // ];
   
   const CHARACTERS_WITH_IMAGES = [
-    { name: "Juan",  image: "images/characters/Juan.png" },
-    { name: "Maria", image: "images/characters/Maria.png" },
-    { name: "Lucia", image: "images/characters/Lucia.png" },
-    { name: "Ana",   image: "images/characters/Ana.png" },
-    { name: "Carlos",image: "images/characters/Carlos.png" }
+    { name: "Ana", image: "/images/characters/Ana.png" },
+    { name: "Carlos", image: "/images/characters/Carlos.png" },
+    { name: "Juan", image: "/images/characters/Juan.png" },
+    { name: "Lucia", image: "/images/characters/Lucia.png" },
+    { name: "Maria", image: "/images/characters/Maria.png" }
   ];
 
   // Catálogo de emociones
