@@ -368,7 +368,11 @@ files.forEach(fileName => {
     console.log(`Actualizado original: ${filePath}`);
 
     // 2) Guardar el transformado en dialog_data_processed
-    const outputPath = path.join(DIR_PROCESSED, fileName);
+    // const outputPath = path.join(DIR_PROCESSED, fileName);
+    const parsed = path.parse(fileName);
+    const newFileName = `${parsed.name}_RENDERIZAR${parsed.ext}`;
+    const outputPath = path.join(DIR_PROCESSED, newFileName);
+
     fs.writeFileSync(outputPath, JSON.stringify(result.transformed, null, 2));
     console.log(`Generado transformado: ${outputPath}`);
 
