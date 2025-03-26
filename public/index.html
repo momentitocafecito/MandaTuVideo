@@ -29,26 +29,34 @@
 
   <!-- CONTENIDO PRINCIPAL: se mostrará solo luego del login -->
   <div id="mainContent" style="display: none;">
+    <!-- Contenedor para la información y acciones del usuario -->
+    <div id="userInfoContainer" class="user-info">
+      <span id="userEmailDisplay"></span>
+      <button id="logoutBtn">Cerrar sesión</button>
+    </div>
+
     <h1>Crear Escenas y Diálogos</h1>
+
     <!-- CONTENEDOR PRINCIPAL DE ESCENAS -->
     <div id="scenesContainer">
       <!-- Se agregarán las escenas de forma dinámica -->
     </div>
+
     <!-- BOTÓN PARA AGREGAR NUEVA ESCENA -->
     <button id="addSceneBtn">Agregar Nueva Escena (+)</button>
     <br><br>
+
     <!-- BOTÓN PARA ENVIAR TODO EL CONTENIDO -->
     <button id="sendAllBtn">Enviar</button>
+
     <!-- SECCIÓN DE LOGS: Vista previa del mensaje a enviar -->
     <div id="logSection">
       <h2>Vista previa del mensaje a enviar:</h2>
       <pre id="logContent"></pre>
-
       <div id="debugSection">
         <h3>Debug Info:</h3>
         <pre id="debugInfo"></pre>
       </div>
-      
     </div>
   </div>
 

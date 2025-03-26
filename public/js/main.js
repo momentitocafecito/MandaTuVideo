@@ -1,74 +1,69 @@
-// ======== FUNCIÓN AUXILIAR PARA DECODIFICAR JWT ========
+/**********************************************
+ * 1. Auxiliar: Decodificar JWT de Google
+ **********************************************/
 function parseJwt(token) {
   const base64Url = token.split('.')[1];
   const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-  const jsonPayload = decodeURIComponent(window.atob(base64)
-    .split('')
-    .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-    .join(''));
+  const jsonPayload = decodeURIComponent(
+    window.atob(base64).split('').map((c) =>
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join('')
+  );
   return JSON.parse(jsonPayload);
 }
 
-// ======== FUNCIONES DE LOGIN CON GOOGLE ========
-// Esta función será llamada automáticamente al recibir la respuesta de Google Identity Services.
-// function handleCredentialResponse(response) {
-//   // "response.credential" es el token JWT devuelto por Google
-//   console.log("Credenciales recibidas:", response.credential);
-
-//   // Aquí podrías procesar el token JWT o extraer el email del usuario si deseas
-//   console.log("Usuario autenticado:", response);
-
-//   // Ocultamos la sección de login y mostramos el contenido principal
-//   document.getElementById("loginSection").style.display = "none";
-//   document.getElementById("mainContent").style.display = "block";
-// }
-// ======== FUNCIONES DE LOGIN CON GOOGLE ========
-// Esta función será llamada automáticamente al recibir la respuesta de Google Identity Services.
+/**********************************************
+ * 2. Respuesta del Login con Google
+ **********************************************/
 function handleCredentialResponse(response) {
   console.log("Credenciales recibidas:", response.credential);
 
-  // Decodificar token JWT y obtener email del usuario
   const tokenPayload = parseJwt(response.credential);
   console.log("Usuario autenticado:", tokenPayload);
 
-  // Almacenar el email en variable global
+  // Guardar el email en una variable global
   window.loggedInUserEmail = tokenPayload.email || "usuario_desconocido";
 
-  // Ocultar sección de login y mostrar contenido principal
+  // Mostrar el email en la interfaz
+  const userEmailDisplay = document.getElementById("userEmailDisplay");
+  userEmailDisplay.innerText = window.loggedInUserEmail;
+
+  // Ocultar loginSection, mostrar mainContent
   document.getElementById("loginSection").style.display = "none";
   document.getElementById("mainContent").style.display = "block";
 }
 
-// ======== FIN DEL LOGIN ========
-
-
-// ============ REFERENCIAS A ELEMENTOS DEL DOM ============
+/**********************************************
+ * 3. Referencias a elementos DOM
+ **********************************************/
 const addSceneBtn = document.getElementById("addSceneBtn");
 const sendAllBtn = document.getElementById("sendAllBtn");
 const scenesContainer = document.getElementById("scenesContainer");
+const logoutBtn = document.getElementById("logoutBtn");
 
-// Contador para identificar escenas de forma única
-let sceneCount = 0;
+// Evento de logout
+logoutBtn.addEventListener("click", () => {
+  // “Cerrar sesión” en tu app (no cierra la sesión global de Google)
+  window.loggedInUserEmail = null;
+  document.getElementById("mainContent").style.display = "none";
+  document.getElementById("loginSection").style.display = "block";
+});
 
-
-// ============ FUNCIÓN PARA CREAR UNA NUEVA ESCENA ============
+/**********************************************
+ * 4. Crear una nueva Escena
+ **********************************************/
 function createSceneBlock(sceneIndex) {
-  // Contenedor principal de la escena
   const sceneBlock = document.createElement("div");
   sceneBlock.classList.add("scene-block");
   sceneBlock.dataset.sceneIndex = sceneIndex;
 
-  // Título de la escena
+  // Título
   const sceneHeader = document.createElement("div");
   sceneHeader.classList.add("scene-header");
   sceneHeader.innerText = `Escena #${sceneIndex + 1}`;
   sceneBlock.appendChild(sceneHeader);
 
-  // Selección de lugar (catálogo) + opción de escribir uno nuevo
-  const placeLabel = document.createElement("label");
-  placeLabel.innerText = "Lugar de la escena:";
-  sceneBlock.appendChild(placeLabel);
-
+  // Dropdown para 'Lugar de la escena'
   const placeSelect = document.createElement("select");
   placeSelect.name = `scenePlace_${sceneIndex}`;
   placeSelect.innerHTML = `<option value="">--Selecciona un lugar--</option>`;
@@ -78,14 +73,11 @@ function createSceneBlock(sceneIndex) {
     option.text = place;
     placeSelect.appendChild(option);
   });
+  // Seleccionar el primer lugar por defecto
+  if (PLACES_CATALOG.length > 0) {
+    placeSelect.value = PLACES_CATALOG[0];
+  }
   sceneBlock.appendChild(placeSelect);
-
-  // Input para escribir un lugar nuevo (opcional)
-  const placeInput = document.createElement("input");
-  placeInput.type = "text";
-  placeInput.placeholder = "O escribe un lugar nuevo...";
-  placeInput.name = `scenePlaceCustom_${sceneIndex}`;
-  sceneBlock.appendChild(placeInput);
 
   // Contenedor de diálogos
   const dialoguesContainer = document.createElement("div");
@@ -93,37 +85,42 @@ function createSceneBlock(sceneIndex) {
   dialoguesContainer.id = `dialoguesContainer_${sceneIndex}`;
   sceneBlock.appendChild(dialoguesContainer);
 
-  // Botón para agregar diálogos dentro de esta escena
+  // Botón circular para agregar diálogos
   const addDialogueBtn = document.createElement("button");
   addDialogueBtn.type = "button";
-  addDialogueBtn.innerText = "Agregar diálogo (+)";
+  addDialogueBtn.classList.add("add-dialogue-btn");
+  addDialogueBtn.innerText = "+";
   addDialogueBtn.addEventListener("click", () => {
     createDialogueBlock(sceneIndex, dialoguesContainer);
   });
   sceneBlock.appendChild(addDialogueBtn);
 
+  // Botón de eliminar escena (bote de basura)
+  const deleteSceneBtn = document.createElement("button");
+  deleteSceneBtn.type = "button";
+  deleteSceneBtn.classList.add("delete-scene-btn");
+  deleteSceneBtn.innerText = "🗑️";
+  deleteSceneBtn.addEventListener("click", () => {
+    scenesContainer.removeChild(sceneBlock);
+  });
+  sceneBlock.appendChild(deleteSceneBtn);
+
   return sceneBlock;
 }
 
-
-// ============ FUNCIÓN PARA CREAR UN NUEVO DIÁLOGO DENTRO DE UNA ESCENA ============
+/**********************************************
+ * 5. Crear un nuevo Diálogo dentro de una Escena
+ **********************************************/
 function createDialogueBlock(sceneIndex, container) {
-  // Div que envuelve el diálogo
   const dialogueGroup = document.createElement("div");
   dialogueGroup.classList.add("dialogue-group");
 
-  // Contenedor para personaje y emoción (horizontal)
   const dialogueInfo = document.createElement("div");
   dialogueInfo.classList.add("dialogue-info");
 
-  // --- Bloque para Personaje ---
+  // Personaje (dropdown)
   const charContainer = document.createElement("div");
   charContainer.classList.add("char-container");
-
-  const charLabel = document.createElement("label");
-  charLabel.innerText = "Personaje:";
-  charContainer.appendChild(charLabel);
-
   const charSelect = document.createElement("select");
   charSelect.name = `character_${sceneIndex}[]`;
   charSelect.innerHTML = `<option value="">--Selecciona un personaje--</option>`;
@@ -133,17 +130,15 @@ function createDialogueBlock(sceneIndex, container) {
     option.text = char;
     charSelect.appendChild(option);
   });
+  if (CHARACTERS_CATALOG.length > 0) {
+    charSelect.value = CHARACTERS_CATALOG[0];
+  }
   charContainer.appendChild(charSelect);
   dialogueInfo.appendChild(charContainer);
 
-  // --- Bloque para Emoción ---
+  // Emoción (dropdown)
   const emoContainer = document.createElement("div");
   emoContainer.classList.add("emo-container");
-
-  const emoLabel = document.createElement("label");
-  emoLabel.innerText = "Emoción:";
-  emoContainer.appendChild(emoLabel);
-
   const emoSelect = document.createElement("select");
   emoSelect.name = `emotion_${sceneIndex}[]`;
   emoSelect.innerHTML = `<option value="">--Selecciona una emoción--</option>`;
@@ -153,36 +148,55 @@ function createDialogueBlock(sceneIndex, container) {
     option.text = emo;
     emoSelect.appendChild(option);
   });
+  if (EMOTIONS_CATALOG.length > 0) {
+    emoSelect.value = EMOTIONS_CATALOG[0];
+  }
   emoContainer.appendChild(emoSelect);
   dialogueInfo.appendChild(emoContainer);
 
-  // Agregar el contenedor horizontal al bloque de diálogo
   dialogueGroup.appendChild(dialogueInfo);
 
-  // Etiqueta y área para escribir el diálogo
-  const dialogueLabel = document.createElement("label");
-  dialogueLabel.innerText = "Diálogo:";
-  dialogueGroup.appendChild(dialogueLabel);
-
+  // Textarea de diálogo (sin etiqueta "Diálogo:")
   const dialogueInput = document.createElement("textarea");
   dialogueInput.name = `dialogueText_${sceneIndex}[]`;
   dialogueInput.rows = 3;
   dialogueInput.placeholder = "Escribe aquí lo que dice el personaje...";
   dialogueGroup.appendChild(dialogueInput);
 
-  // Agregar el bloque de diálogo al contenedor de diálogos de la escena
+  // Botón para eliminar este diálogo
+  const deleteDialogueBtn = document.createElement("button");
+  deleteDialogueBtn.type = "button";
+  deleteDialogueBtn.classList.add("delete-dialogue-btn");
+  deleteDialogueBtn.innerText = "🗑️";
+  deleteDialogueBtn.addEventListener("click", () => {
+    container.removeChild(dialogueGroup);
+  });
+  dialogueGroup.appendChild(deleteDialogueBtn);
+
   container.appendChild(dialogueGroup);
 }
 
-
-// ============ EVENTO: AGREGAR NUEVA ESCENA ============
-addSceneBtn.addEventListener("click", () => {
-  const newScene = createSceneBlock(sceneCount);
-  scenesContainer.appendChild(newScene);
-  sceneCount++;
+/**********************************************
+ * 6. Agregar la primera escena al cargar (opcional)
+ **********************************************/
+document.addEventListener("DOMContentLoaded", () => {
+  addSceneBtn.click();
 });
 
-// ============ EVENTO: "ENVIAR" TODOS LOS DIÁLOGOS ============
+/**********************************************
+ * 7. Evento: Agregar Nueva Escena
+ **********************************************/
+addSceneBtn.addEventListener("click", () => {
+  const sceneCount = document.querySelectorAll(".scene-block").length;
+  const newScene = createSceneBlock(sceneCount);
+  scenesContainer.appendChild(newScene);
+});
+
+/**********************************************
+ * 8. Evento: "Enviar" Todo
+ *    - Recorre las escenas/diálogos
+ *    - Manda el contenido a GitHub (sendDialogToGitHub)
+ **********************************************/
 sendAllBtn.addEventListener("click", () => {
   let finalMessage = "";
   const allScenes = document.querySelectorAll(".scene-block");
@@ -195,105 +209,43 @@ sendAllBtn.addEventListener("click", () => {
   allScenes.forEach((scene, index) => {
     finalMessage += `=== Escena #${index + 1} ===\n`;
 
-    // Lugar: se usa el input si hay un valor o el select si no se llenó el input.
     const placeSelect = scene.querySelector(`select[name="scenePlace_${index}"]`);
-    const placeInput = scene.querySelector(`input[name="scenePlaceCustom_${index}"]`);
-    const placeValue = placeInput.value.trim() !== ""
-      ? placeInput.value
-      : (placeSelect.value.trim() || "Sin lugar definido");
+    const placeValue = placeSelect.value.trim() || "Sin lugar definido";
     finalMessage += `Lugar: ${placeValue}\n\n`;
 
-    // Diálogos de la escena
+    // Diálogos
     const dialogueGroups = scene.querySelectorAll(".dialogue-group");
     dialogueGroups.forEach((dg) => {
-      // Personaje (solo se usa el select)
       const charSelect = dg.querySelector(`select[name="character_${index}[]"]`);
       const characterValue = charSelect.value.trim() || "Personaje desconocido";
 
-      // Emoción
       const emoSelect = dg.querySelector(`select[name="emotion_${index}[]"]`);
       const emotionValue = emoSelect.value.trim() || "Sin emoción";
 
-      // Diálogo
       const dialogueInput = dg.querySelector(`textarea[name="dialogueText_${index}[]"]`);
       const dialogueValue = dialogueInput.value.trim() || "Diálogo vacío";
 
       finalMessage += `Personaje: ${characterValue} | Emoción: ${emotionValue}\n`;
       finalMessage += `Diálogo: ${dialogueValue}\n\n`;
     });
+
     finalMessage += "-----------------------------\n\n";
   });
 
-  // Mostrar el mensaje final en la sección de logs (vista previa)
+  // Vista previa
   document.getElementById("logContent").innerText = finalMessage;
 
-  // En lugar de abrir Gmail, ahora enviamos el JSON a Netlify
+  // Enviar el JSON a Netlify
   sendDialogToGitHub(finalMessage);
 });
 
-// ============ OPCIONAL: AGREGAR AUTOMÁTICAMENTE UNA PRIMERA ESCENA ============
-document.addEventListener("DOMContentLoaded", () => {
-  addSceneBtn.click();
-});
-
-
-// ============ FUNCIÓN PARA MANDAR EL JSON A GITHUB (VÍA NETLIFY) ============
-// function sendDialogToGitHub(finalMessage) {
-//   // 1) Referencia a nuestro contenedor de debug
-//   const debugInfo = document.getElementById("debugInfo");
-
-//   // Podemos obtener el email real si lo extraemos de response.credential decodificando el JWT.
-//   // Por simplicidad, un valor fijo:
-//   const usuario = "usuario@gmail.com";
-//   const momento = new Date().toISOString();
-
-//   // Construimos el payload que enviaremos al backend
-//   const payload = {
-//     usuario,
-//     momento,
-//     contenido: finalMessage,
-//     otros: {
-//       ip: "127.0.0.1",
-//       note: "Información adicional"
-//     }
-//   };
-
-//   // 2) Mostramos el payload en nuestro debugInfo ANTES de enviar
-//   debugInfo.innerText = "Enviando payload:\n\n" + JSON.stringify(payload, null, 2);
-
-//   // 3) Hacemos POST a la función serverless en Netlify
-//   fetch("/.netlify/functions/saveDialog", {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify(payload)
-//   })
-//   .then(res => res.json())
-//   .then(data => {
-//     // 4) Mostramos la respuesta en debugInfo
-//     debugInfo.innerText += "\n\nRespuesta:\n\n" + JSON.stringify(data, null, 2);
-
-//     if (data.error) {
-//       // Si la función te envía { error: "...", details: "..." }, mostramos todo
-//       alert("Hubo un error guardando el archivo: " + data.error);
-
-//       if (data.details) {
-//         debugInfo.innerText += "\n\nDetalles del error:\n" + data.details;
-//       }
-//     } else {
-//       alert("¡Tu archivo JSON fue guardado con éxito en GitHub!");
-//     }
-//   })
-//   .catch(err => {
-//     console.error("Error en la petición:", err);
-//     debugInfo.innerText += "\n\nError en la petición:\n" + err;
-//     alert("Error desconocido al guardar.");
-//   });
-// }
-// ============ FUNCIÓN PARA MANDAR EL JSON A GITHUB (VÍA NETLIFY) ============
+/**********************************************
+ * 9. Función para enviar el JSON a Netlify (serverless)
+ **********************************************/
 function sendDialogToGitHub(finalMessage) {
   const debugInfo = document.getElementById("debugInfo");
 
-  // Ahora se obtiene correctamente el email real del usuario que inició sesión
+  // Email del usuario
   const usuario = window.loggedInUserEmail || "usuario_desconocido";
   const momento = new Date().toISOString();
 
@@ -307,30 +259,28 @@ function sendDialogToGitHub(finalMessage) {
     }
   };
 
-  // Mostrar payload en debugInfo antes del envío
   debugInfo.innerText = "Enviando payload:\n\n" + JSON.stringify(payload, null, 2);
 
-  // Enviar a Netlify
   fetch("/.netlify/functions/saveDialog", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   })
-  .then(res => res.json())
-  .then(data => {
-    debugInfo.innerText += "\n\nRespuesta:\n\n" + JSON.stringify(data, null, 2);
-    if (data.error) {
-      alert("Hubo un error guardando el archivo: " + data.error);
-      if (data.details) {
-        debugInfo.innerText += "\n\nDetalles del error:\n" + JSON.stringify(data.details, null, 2);
+    .then((res) => res.json())
+    .then((data) => {
+      debugInfo.innerText += "\n\nRespuesta:\n\n" + JSON.stringify(data, null, 2);
+      if (data.error) {
+        alert("Hubo un error guardando el archivo: " + data.error);
+        if (data.details) {
+          debugInfo.innerText += "\n\nDetalles del error:\n" + data.details;
+        }
+      } else {
+        alert("¡Tu archivo JSON fue guardado con éxito en GitHub!");
       }
-    } else {
-      alert("¡Tu archivo JSON fue guardado con éxito en GitHub!");
-    }
-  })
-  .catch(err => {
-    console.error("Error en la petición:", err);
-    debugInfo.innerText += "\n\nError en la petición:\n" + err;
-    alert("Error desconocido al guardar.");
-  });
+    })
+    .catch((err) => {
+      console.error("Error en la petición:", err);
+      debugInfo.innerText += "\n\nError en la petición:\n" + err;
+      alert("Error desconocido al guardar.");
+    });
 }
