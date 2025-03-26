@@ -608,7 +608,7 @@ function sendDialogToGitHub(finalMessage) {
  * 6) Mostrar mensaje de exito 5s => cerrar
  **********************************************/
 function showSuccessMessage() {
-  successMessage.textContent = "Mensaje Enviado, gracias por confiar en Momentito cafecito";
+  successMessage.textContent = "Mensaje Enviado, gracias por confiar en Momentito Cafecito, te llegará un correo en ~24 hrs con tu video.";
   successOverlay.style.display = "flex";
 
   // Cerrar en 5 segundos
