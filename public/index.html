@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mi Login con Google</title>
-  <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
   <link rel="stylesheet" href="css/style.css">
   <!-- Script de Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -50,13 +50,29 @@
     <button id="sendAllBtn">Enviar</button>
 
     <!-- SECCIÓN DE LOGS: Vista previa del mensaje a enviar -->
-    <div id="logSection">
+    <!-- <div id="logSection">
       <h2>Vista previa del mensaje a enviar:</h2>
       <pre id="logContent"></pre>
       <div id="debugSection">
         <h3>Debug Info:</h3>
         <pre id="debugInfo"></pre>
       </div>
+    </div> -->
+  </div>
+
+  <!-- POPUP / MODAL OVERLAY (por defecto oculto) -->
+  <div id="confirmationOverlay" style="display: none;">
+    <div id="confirmationModal">
+      <p id="confirmationMessage"></p>
+      <button id="confirmSendBtn">Confirmar</button>
+      <button id="cancelSendBtn">Regresar</button>
+    </div>
+  </div>
+
+  <!-- Overlay de éxito (por defecto oculto) -->
+  <div id="successOverlay" style="display: none;">
+    <div id="successModal">
+      <p id="successMessage"></p>
     </div>
   </div>
 
