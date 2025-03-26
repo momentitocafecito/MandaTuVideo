@@ -10,39 +10,129 @@ if (!fs.existsSync(DIR_PROCESSED)) {
   fs.mkdirSync(DIR_PROCESSED);
 }
 
-// ---------------------------------------------------------------------------------
-// Función que construye la transformación que quieres aplicar a cada JSON
-// Aquí agregamos y/o modificamos los campos solicitados.
-//
-// - Si el archivo ya tiene otros.transformado = "true", lo saltamos.
-// - Si no lo tiene, se lo agregamos como "false" antes de procesar.
-// ---------------------------------------------------------------------------------
+/**
+ * --------------------------------------------------------------------------------
+ * 1) FUNCIÓN QUE "ANALIZA" Y TRANSFORMA EL CAMPO 'contenido'
+ *    (simulando la lógica del ejemplo en Python)
+ * --------------------------------------------------------------------------------
+ */
+function transformContent(contenidoOriginal) {
+  // 1. Partimos el texto en líneas, limpiamos espacios y filtramos líneas vacías
+  const lineas = contenidoOriginal
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  // 2. Identificamos la línea de "Escena" y la de "Lugar"
+  let escenaLine = '';
+  let lugarLine = '';
+  
+  // 3. Vamos acumulando objetos con { personaje, emocion, dialogo }
+  const personajesBloques = [];
+
+  lineas.forEach(linea => {
+    // Ejemplo: "=== Escena #1 ==="
+    if (linea.toLowerCase().startsWith('=== escena')) {
+      // Quitamos los '='
+      escenaLine = linea.replace(/=/g, '').trim(); // "Escena #1"
+    }
+    // Ejemplo: "Lugar: Sala de estar"
+    else if (linea.toLowerCase().startsWith('lugar:')) {
+      lugarLine = linea;
+    }
+    // Ejemplo: "Personaje: Carlos | Emoción: Enojado"
+    else if (linea.toLowerCase().startsWith('personaje:')) {
+      personajesBloques.push({
+        personaje: linea,
+        dialogo: '' // lo llenaremos luego
+      });
+    }
+    // Ejemplo: "Diálogo: Hola"
+    else if (linea.toLowerCase().startsWith('diálogo:') && personajesBloques.length > 0) {
+      personajesBloques[personajesBloques.length - 1].dialogo = linea;
+    }
+  });
+
+  // 4. Construimos un pseudo-script
+  const scriptLines = [];
+  scriptLines.push('–Script–\n');
+
+  if (escenaLine) {
+    scriptLines.push(`[ ${escenaLine} ]`);
+  }
+  if (lugarLine) {
+    scriptLines.push(`(${lugarLine})\n`);
+  }
+
+  // 5. Para cada bloque de personaje, extraemos los datos (nombre, emoción, diálogo)
+  personajesBloques.forEach(bloque => {
+    let nombre = 'PersonajeDesconocido';
+    let emocion = 'Indefinida';
+    let dialogoTexto = '…';
+
+    try {
+      // "Personaje: Carlos | Emoción: Enojado"
+      const [, resto] = bloque.personaje.split(': ', 2); // ["Personaje", "Carlos | Emoción: Enojado"]
+      if (resto.includes('| Emoción:')) {
+        const [parteNombre, parteEmocion] = resto.split('| Emoción:');
+        nombre  = parteNombre.trim();
+        emocion = parteEmocion.trim();
+      } else {
+        nombre = resto.trim();
+      }
+    } catch {
+      // Se mantiene el default
+    }
+
+    try {
+      // "Diálogo: Hola"
+      const [, d] = bloque.dialogo.split(': ', 2);
+      dialogoTexto = d.trim();
+    } catch {
+      // Se mantiene el default
+    }
+
+    // Armamos el "bloque" al estilo guion
+    scriptLines.push(`[${nombre}] (??? segundos | ${emocion} | ???)`);
+    scriptLines.push(`1. ${dialogoTexto}\n`);
+  });
+
+  // 6. Cerramos con algún fin
+  scriptLines.push('**FIN**');
+
+  // 7. Retornamos como un string
+  return scriptLines.join('\n');
+}
+
+/**
+ * --------------------------------------------------------------------------------
+ * 2) FUNCIÓN QUE RECIBE EL OBJETO JSON ORIGINAL
+ *    - Ajusta los campos title, url, status, sendDate
+ *    - Llama a transformContent(contenidoOriginal)
+ * --------------------------------------------------------------------------------
+ */
 function transformData(original) {
-  // 1) Asegurar que exista "otros"
+  // Aseguramos que exista "otros"
   if (!original.otros) {
     original.otros = {};
   }
-  // 2) Checar si "transformado" está en false
-  //    Si no existe, lo forzamos a false
+
+  // Si no existe "transformado", lo ponemos en "false"
   if (typeof original.otros.transformado === 'undefined') {
     original.otros.transformado = 'false';
   }
 
-  // 3) Si transformado ya es "true", NO procesamos
+  // Si ya está "true", no hay nada que hacer
   if (original.otros.transformado === 'true') {
-    return null; // señal de "omitir"
+    return null; // señal de que ya no se procesa
   }
 
-  // ----------------------------
-  // Aquí va tu lógica de parseo
-  // ----------------------------
-  
-  // Ejemplo: Ajustamos "status", "title", "sendDate", etc.
-  const usuario  = original.usuario  || 'usuario_desconocido';
-  const momento  = original.momento  || new Date().toISOString();
-  const contenido= original.contenido|| '';
-  
-  // Formato YYYYmmddHHMMSS
+  // Extraemos datos
+  const usuario   = original.usuario   || 'usuario_desconocido';
+  const momento   = original.momento   || new Date().toISOString();
+  const contenido = original.contenido || '';
+
+  // Fecha en formato YYYYmmddHHMMSS
   const fechaObj = new Date(momento);
   const yyyy = fechaObj.getUTCFullYear();
   const mm   = String(fechaObj.getUTCMonth() + 1).padStart(2, '0');
@@ -52,38 +142,38 @@ function transformData(original) {
   const SS   = String(fechaObj.getUTCSeconds()).padStart(2, '0');
   const fechaStr = `${yyyy}${mm}${dd}${HH}${MM}${SS}`;
 
-  // Campos según tu requerimiento
-  const newTitle   = `${usuario}_${fechaStr}_RENDERIZAR`;
-  const newStatus  = 'procesar';
-  const newSendDate= fechaStr;
-  const newUrl     = usuario; 
+  // Llamamos a la función que hace el "análisis profundo" del contenido
+  const newContent = transformContent(contenido);
 
-  // 4) Escribe las nuevas propiedades en el objeto
+  // Construimos el objeto resultante
   const transformed = {
-    title: newTitle,
-    content: contenido,  // Aquí podrías hacer parseos adicionales
-    url: newUrl,
-    status: newStatus,
-    sendDate: newSendDate,
-    // Conservamos otros campos y metemos el "transformado=true"
+    title:  `${usuario}_${fechaStr}_RENDERIZAR`,
+    content: newContent,
+    url:    usuario,
+    status: 'procesar',
+    sendDate: fechaStr,
+    // "otros" conserva lo que hubiera y forzamos transformado = true
     otros: {
       ...original.otros,
-      transformado: 'true'  // Ya está transformado
+      transformado: 'true'
     }
   };
 
-  // Devuelve el objeto transformado
   return transformed;
 }
 
-// ---------------------------------------------------------------------------------
-// Procesar cada JSON en dialog_data
-// ---------------------------------------------------------------------------------
+/**
+ * --------------------------------------------------------------------------------
+ * 3) LEER ARCHIVOS .json DESDE dialog_data
+ *    - Solo se transforman los que tengan transformado=false
+ *    - Se generan en dialog_data_processed
+ *    - Se elimina (o renombra) el original
+ * --------------------------------------------------------------------------------
+ */
 const files = fs.readdirSync(DIR_UNPROCESSED);
 
-// Recorremos todos los archivos .json
 files.forEach(fileName => {
-  if (!fileName.endsWith('.json')) return; // ignoramos otros tipos
+  if (!fileName.endsWith('.json')) return;
 
   const filePath = path.join(DIR_UNPROCESSED, fileName);
   const raw = fs.readFileSync(filePath, 'utf8');
@@ -92,22 +182,18 @@ files.forEach(fileName => {
     const originalJson = JSON.parse(raw);
     const transformedJson = transformData(originalJson);
 
-    // Si transformData() devuelve null, significa que estaba "transformado=true"
     if (transformedJson === null) {
-      console.log(`Omitiendo ${fileName}: ya está transformado`);
+      console.log(`Omitiendo ${fileName}: ya está "transformado": true.`);
       return;
     }
 
-    // Guardamos el nuevo JSON en la carpeta "dialog_data_processed"
+    // Guardamos el resultado en la carpeta de procesados
     const outputPath = path.join(DIR_PROCESSED, fileName);
     fs.writeFileSync(outputPath, JSON.stringify(transformedJson, null, 2));
     console.log(`Generado: ${outputPath}`);
 
-    // (Opcional) Eliminar o mover el original para que no se reprocese
-    fs.unlinkSync(filePath); 
-    // o, en lugar de borrarlo, podrías renombrarlo a .bak
-    // fs.renameSync(filePath, filePath + '.bak');
-
+    // Eliminamos el archivo original para que no se procese de nuevo
+    fs.unlinkSync(filePath);
   } catch (err) {
     console.error(`Error procesando ${fileName}:`, err);
   }
