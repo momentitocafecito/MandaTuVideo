@@ -7,15 +7,6 @@ const PLACES_CATALOG = [
     "Restaurante"
   ];
   
-  // Catálogo de personajes (ya no se permite ingresar uno nuevo)
-  // const CHARACTERS_CATALOG = [
-  //   "Juan",
-  //   "María",
-  //   "Carlos",
-  //   "Lucía",
-  //   "Ana"
-  // ];
-  
   const CHARACTERS_WITH_IMAGES = [
     { name: "Ana", image: "/images/characters/Ana.png" },
     { name: "Carlos", image: "/images/characters/Carlos.png" },
@@ -33,3 +24,11 @@ const PLACES_CATALOG = [
     "Nervioso"
   ];
   
+  // Catálogo de onomatopeyas
+const ONOMATOPEIAS_CATALOG = [
+  "Pow",
+  "Auch",
+  "Bam",
+  "Zing",
+  "Puf"
+];

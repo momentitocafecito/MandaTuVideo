@@ -111,93 +111,25 @@ function createSceneBlock(sceneIndex) {
 /**********************************************
  * 5. Crear un nuevo Diálogo dentro de una Escena
  **********************************************/
-// function createDialogueBlock(sceneIndex, container) {
-//   const dialogueGroup = document.createElement("div");
-//   dialogueGroup.classList.add("dialogue-group");
-
-//   const dialogueInfo = document.createElement("div");
-//   dialogueInfo.classList.add("dialogue-info");
-
-//   // Personaje (dropdown)
-//   const charContainer = document.createElement("div");
-//   charContainer.classList.add("char-container");
-//   const charSelect = document.createElement("select");
-//   charSelect.name = `character_${sceneIndex}[]`;
-//   charSelect.innerHTML = `<option value="">--Selecciona un personaje--</option>`;
-//   CHARACTERS_CATALOG.forEach((char) => {
-//     const option = document.createElement("option");
-//     option.value = char;
-//     option.text = char;
-//     charSelect.appendChild(option);
-//   });
-//   if (CHARACTERS_CATALOG.length > 0) {
-//     charSelect.value = CHARACTERS_CATALOG[0];
-//   }
-//   charContainer.appendChild(charSelect);
-//   dialogueInfo.appendChild(charContainer);
-
-//   // Emoción (dropdown)
-//   const emoContainer = document.createElement("div");
-//   emoContainer.classList.add("emo-container");
-//   const emoSelect = document.createElement("select");
-//   emoSelect.name = `emotion_${sceneIndex}[]`;
-//   emoSelect.innerHTML = `<option value="">--Selecciona una emoción--</option>`;
-//   EMOTIONS_CATALOG.forEach((emo) => {
-//     const option = document.createElement("option");
-//     option.value = emo;
-//     option.text = emo;
-//     emoSelect.appendChild(option);
-//   });
-//   if (EMOTIONS_CATALOG.length > 0) {
-//     emoSelect.value = EMOTIONS_CATALOG[0];
-//   }
-//   emoContainer.appendChild(emoSelect);
-//   dialogueInfo.appendChild(emoContainer);
-
-//   dialogueGroup.appendChild(dialogueInfo);
-
-//   // Textarea de diálogo (sin etiqueta "Diálogo:")
-//   const dialogueInput = document.createElement("textarea");
-//   dialogueInput.name = `dialogueText_${sceneIndex}[]`;
-//   dialogueInput.rows = 3;
-//   dialogueInput.placeholder = "Escribe aquí lo que dice el personaje...";
-//   dialogueGroup.appendChild(dialogueInput);
-
-//   // Botón para eliminar este diálogo
-//   const deleteDialogueBtn = document.createElement("button");
-//   deleteDialogueBtn.type = "button";
-//   deleteDialogueBtn.classList.add("delete-dialogue-btn");
-//   deleteDialogueBtn.innerText = "🗑️";
-//   deleteDialogueBtn.addEventListener("click", () => {
-//     container.removeChild(dialogueGroup);
-//   });
-//   dialogueGroup.appendChild(deleteDialogueBtn);
-
-//   container.appendChild(dialogueGroup);
-// }
 
 function createDialogueBlock(sceneIndex, container) {
-  // Div principal de cada diálogo
+  // Div principal del diálogo
   const dialogueGroup = document.createElement("div");
   dialogueGroup.classList.add("dialogue-group");
-
-  // Usaremos display flex para colocar la "columna de personaje" a la izquierda y el textarea a la derecha
   dialogueGroup.style.display = "flex";
   dialogueGroup.style.alignItems = "flex-start";
+  dialogueGroup.style.gap = "20px";
 
-  // Contenedor de la columna izquierda (imagen + menú + emoción)
+  // ----- Columna Izquierda: Personaje y Emoción -----
   const characterColumn = document.createElement("div");
   characterColumn.style.display = "flex";
   characterColumn.style.flexDirection = "column";
   characterColumn.style.alignItems = "center";
-  characterColumn.style.marginRight = "20px";
 
-  // ========== PERSONAJE CON IMAGEN ==========
-  // Elegimos el primer personaje por defecto
+  // Imagen del personaje (por defecto, el primero)
   let currentCharacterIndex = 0;
   const currentChar = CHARACTERS_WITH_IMAGES[currentCharacterIndex];
 
-  // Imagen principal del personaje
   const characterImg = document.createElement("img");
   characterImg.src = currentChar.image;
   characterImg.alt = currentChar.name;
@@ -209,7 +141,7 @@ function createDialogueBlock(sceneIndex, container) {
   characterImg.style.border = "3px solid #ccc";
   characterImg.style.marginBottom = "10px";
 
-  // Menú desplegable (galería de personajes)
+  // Menú desplegable para elegir otro personaje
   const characterMenu = document.createElement("div");
   characterMenu.style.display = "none";
   characterMenu.style.position = "absolute";
@@ -219,28 +151,24 @@ function createDialogueBlock(sceneIndex, container) {
   characterMenu.style.borderRadius = "6px";
   characterMenu.style.zIndex = "999";
 
-  // Input hidden para guardar el nombre del personaje seleccionado
+  // Input hidden para almacenar el nombre del personaje seleccionado
   const hiddenCharacterInput = document.createElement("input");
   hiddenCharacterInput.type = "hidden";
   hiddenCharacterInput.name = `character_${sceneIndex}[]`;
   hiddenCharacterInput.value = currentChar.name;
 
-  // Para posicionar el menú debajo de la imagen, anidamos un contenedor con position relative
+  // Contenedor relativo para la imagen y el menú
   const charImageWrapper = document.createElement("div");
   charImageWrapper.style.position = "relative";
   charImageWrapper.appendChild(characterImg);
   charImageWrapper.appendChild(characterMenu);
 
-  // Al hacer clic en la imagen, mostramos u ocultamos el menú
+  // Al hacer clic en la imagen, se muestra u oculta el menú
   characterImg.addEventListener("click", () => {
-    if (characterMenu.style.display === "none") {
-      characterMenu.style.display = "block";
-    } else {
-      characterMenu.style.display = "none";
-    }
+    characterMenu.style.display = (characterMenu.style.display === "none") ? "block" : "none";
   });
 
-  // Llenamos el menú con las otras imágenes
+  // Rellenar el menú con las imágenes de los personajes
   CHARACTERS_WITH_IMAGES.forEach((charObj, idx) => {
     const charOptionImg = document.createElement("img");
     charOptionImg.src = charObj.image;
@@ -251,8 +179,6 @@ function createDialogueBlock(sceneIndex, container) {
     charOptionImg.style.borderRadius = "50%";
     charOptionImg.style.cursor = "pointer";
     charOptionImg.style.margin = "5px";
-
-    // Al hacer clic en una miniatura, actualizamos el personaje principal
     charOptionImg.addEventListener("click", () => {
       characterImg.src = charObj.image;
       characterImg.alt = charObj.name;
@@ -260,14 +186,13 @@ function createDialogueBlock(sceneIndex, container) {
       currentCharacterIndex = idx;
       characterMenu.style.display = "none";
     });
-
     characterMenu.appendChild(charOptionImg);
   });
 
   characterColumn.appendChild(charImageWrapper);
   characterColumn.appendChild(hiddenCharacterInput);
 
-  // ========== EMOCIÓN (debajo de la imagen) ==========
+  // Dropdown para Emoción, justo debajo de la imagen
   const emoSelect = document.createElement("select");
   emoSelect.name = `emotion_${sceneIndex}[]`;
   EMOTIONS_CATALOG.forEach((emo) => {
@@ -276,40 +201,202 @@ function createDialogueBlock(sceneIndex, container) {
     option.text = emo;
     emoSelect.appendChild(option);
   });
-  // Seleccionar la primera emoción por defecto
   if (EMOTIONS_CATALOG.length > 0) {
     emoSelect.value = EMOTIONS_CATALOG[0];
   }
   characterColumn.appendChild(emoSelect);
 
-  // Agregamos la columna de personaje al diálogo
   dialogueGroup.appendChild(characterColumn);
 
-  // ========== TEXTAREA (derecha) ==========
+  // ----- Columna Derecha: Texto y Onomatopeyas -----
+  const contentColumn = document.createElement("div");
+  contentColumn.style.display = "flex";
+  contentColumn.style.flexDirection = "column";
+  contentColumn.style.flex = "1";
+
+  // Cuadro de texto (textarea)
   const dialogueInput = document.createElement("textarea");
   dialogueInput.name = `dialogueText_${sceneIndex}[]`;
   dialogueInput.rows = 3;
   dialogueInput.placeholder = "Escribe aquí lo que dice el personaje...";
-  // Ancho flexible
-  dialogueInput.style.flex = "1";
   dialogueInput.style.width = "100%";
-  dialogueInput.style.marginRight = "10px";
-  dialogueGroup.appendChild(dialogueInput);
+  dialogueInput.style.boxSizing = "border-box";
+  dialogueInput.style.marginBottom = "10px";
+  contentColumn.appendChild(dialogueInput);
 
-  // ========== BOTÓN ELIMINAR DIÁLOGO ==========
+  // Dropdown de Onomatopeyas, justo debajo del textarea
+  // ----- NUEVO: LISTA DE ONOMATOPEYAS (colocada debajo del textarea)
+  const onomaSelect = document.createElement("select");
+  onomaSelect.name = `onomatopeia_${sceneIndex}[]`;
+
+  // Opción por defecto: "Agregar onomatopeya" (valor vacío)
+  const defaultOption = document.createElement("option");
+  defaultOption.value = "";
+  defaultOption.text = "Agregar onomatopeya";
+  onomaSelect.appendChild(defaultOption);
+
+  // Agregar las opciones reales del catálogo
+  ONOMATOPEIAS_CATALOG.forEach((ono) => {
+    const option = document.createElement("option");
+    option.value = ono;
+    option.text = ono;
+    onomaSelect.appendChild(option);
+  }
+  );
+  contentColumn.appendChild(onomaSelect);
+
+  dialogueGroup.appendChild(contentColumn);
+
+  // Botón para eliminar este diálogo (alineado a la derecha)
   const deleteDialogueBtn = document.createElement("button");
   deleteDialogueBtn.type = "button";
   deleteDialogueBtn.classList.add("delete-dialogue-btn");
   deleteDialogueBtn.innerText = "🗑️";
+  deleteDialogueBtn.style.alignSelf = "flex-end";
   deleteDialogueBtn.style.marginTop = "5px";
   deleteDialogueBtn.addEventListener("click", () => {
     container.removeChild(dialogueGroup);
   });
   dialogueGroup.appendChild(deleteDialogueBtn);
 
-  // Finalmente, agregamos el 'dialogueGroup' al container
   container.appendChild(dialogueGroup);
 }
+
+
+// function createDialogueBlock(sceneIndex, container) {
+//   // Div principal de cada diálogo
+//   const dialogueGroup = document.createElement("div");
+//   dialogueGroup.classList.add("dialogue-group");
+
+//   // Usaremos display flex para colocar la "columna de personaje" a la izquierda y el textarea a la derecha
+//   dialogueGroup.style.display = "flex";
+//   dialogueGroup.style.alignItems = "flex-start";
+
+//   // Contenedor de la columna izquierda (imagen + menú + emoción)
+//   const characterColumn = document.createElement("div");
+//   characterColumn.style.display = "flex";
+//   characterColumn.style.flexDirection = "column";
+//   characterColumn.style.alignItems = "center";
+//   characterColumn.style.marginRight = "20px";
+
+//   // ========== PERSONAJE CON IMAGEN ==========
+//   // Elegimos el primer personaje por defecto
+//   let currentCharacterIndex = 0;
+//   const currentChar = CHARACTERS_WITH_IMAGES[currentCharacterIndex];
+
+//   // Imagen principal del personaje
+//   const characterImg = document.createElement("img");
+//   characterImg.src = currentChar.image;
+//   characterImg.alt = currentChar.name;
+//   characterImg.style.width = "80px";
+//   characterImg.style.height = "80px";
+//   characterImg.style.objectFit = "cover";
+//   characterImg.style.borderRadius = "50%";
+//   characterImg.style.cursor = "pointer";
+//   characterImg.style.border = "3px solid #ccc";
+//   characterImg.style.marginBottom = "10px";
+
+//   // Menú desplegable (galería de personajes)
+//   const characterMenu = document.createElement("div");
+//   characterMenu.style.display = "none";
+//   characterMenu.style.position = "absolute";
+//   characterMenu.style.backgroundColor = "#fff";
+//   characterMenu.style.border = "1px solid #ccc";
+//   characterMenu.style.padding = "5px";
+//   characterMenu.style.borderRadius = "6px";
+//   characterMenu.style.zIndex = "999";
+
+//   // Input hidden para guardar el nombre del personaje seleccionado
+//   const hiddenCharacterInput = document.createElement("input");
+//   hiddenCharacterInput.type = "hidden";
+//   hiddenCharacterInput.name = `character_${sceneIndex}[]`;
+//   hiddenCharacterInput.value = currentChar.name;
+
+//   // Para posicionar el menú debajo de la imagen, anidamos un contenedor con position relative
+//   const charImageWrapper = document.createElement("div");
+//   charImageWrapper.style.position = "relative";
+//   charImageWrapper.appendChild(characterImg);
+//   charImageWrapper.appendChild(characterMenu);
+
+//   // Al hacer clic en la imagen, mostramos u ocultamos el menú
+//   characterImg.addEventListener("click", () => {
+//     if (characterMenu.style.display === "none") {
+//       characterMenu.style.display = "block";
+//     } else {
+//       characterMenu.style.display = "none";
+//     }
+//   });
+
+//   // Llenamos el menú con las otras imágenes
+//   CHARACTERS_WITH_IMAGES.forEach((charObj, idx) => {
+//     const charOptionImg = document.createElement("img");
+//     charOptionImg.src = charObj.image;
+//     charOptionImg.alt = charObj.name;
+//     charOptionImg.style.width = "50px";
+//     charOptionImg.style.height = "50px";
+//     charOptionImg.style.objectFit = "cover";
+//     charOptionImg.style.borderRadius = "50%";
+//     charOptionImg.style.cursor = "pointer";
+//     charOptionImg.style.margin = "5px";
+
+//     // Al hacer clic en una miniatura, actualizamos el personaje principal
+//     charOptionImg.addEventListener("click", () => {
+//       characterImg.src = charObj.image;
+//       characterImg.alt = charObj.name;
+//       hiddenCharacterInput.value = charObj.name;
+//       currentCharacterIndex = idx;
+//       characterMenu.style.display = "none";
+//     });
+
+//     characterMenu.appendChild(charOptionImg);
+//   });
+
+//   characterColumn.appendChild(charImageWrapper);
+//   characterColumn.appendChild(hiddenCharacterInput);
+
+//   // ========== EMOCIÓN (debajo de la imagen) ==========
+//   const emoSelect = document.createElement("select");
+//   emoSelect.name = `emotion_${sceneIndex}[]`;
+//   EMOTIONS_CATALOG.forEach((emo) => {
+//     const option = document.createElement("option");
+//     option.value = emo;
+//     option.text = emo;
+//     emoSelect.appendChild(option);
+//   });
+//   // Seleccionar la primera emoción por defecto
+//   if (EMOTIONS_CATALOG.length > 0) {
+//     emoSelect.value = EMOTIONS_CATALOG[0];
+//   }
+//   characterColumn.appendChild(emoSelect);
+
+//   // Agregamos la columna de personaje al diálogo
+//   dialogueGroup.appendChild(characterColumn);
+
+//   // ========== TEXTAREA (derecha) ==========
+//   const dialogueInput = document.createElement("textarea");
+//   dialogueInput.name = `dialogueText_${sceneIndex}[]`;
+//   dialogueInput.rows = 3;
+//   dialogueInput.placeholder = "Escribe aquí lo que dice el personaje...";
+//   // Ancho flexible
+//   dialogueInput.style.flex = "1";
+//   dialogueInput.style.width = "100%";
+//   dialogueInput.style.marginRight = "10px";
+//   dialogueGroup.appendChild(dialogueInput);
+
+//   // ========== BOTÓN ELIMINAR DIÁLOGO ==========
+//   const deleteDialogueBtn = document.createElement("button");
+//   deleteDialogueBtn.type = "button";
+//   deleteDialogueBtn.classList.add("delete-dialogue-btn");
+//   deleteDialogueBtn.innerText = "🗑️";
+//   deleteDialogueBtn.style.marginTop = "5px";
+//   deleteDialogueBtn.addEventListener("click", () => {
+//     container.removeChild(dialogueGroup);
+//   });
+//   dialogueGroup.appendChild(deleteDialogueBtn);
+
+//   // Finalmente, agregamos el 'dialogueGroup' al container
+//   container.appendChild(dialogueGroup);
+// }
 
 
 /**********************************************
@@ -333,49 +420,7 @@ addSceneBtn.addEventListener("click", () => {
  *    - Recorre las escenas/diálogos
  *    - Manda el contenido a GitHub (sendDialogToGitHub)
  **********************************************/
-// sendAllBtn.addEventListener("click", () => {
-//   let finalMessage = "";
-//   const allScenes = document.querySelectorAll(".scene-block");
 
-//   if (allScenes.length === 0) {
-//     alert("No has agregado ninguna escena.");
-//     return;
-//   }
-
-//   allScenes.forEach((scene, index) => {
-//     finalMessage += `=== Escena #${index + 1} ===\n`;
-
-//     const placeSelect = scene.querySelector(`select[name="scenePlace_${index}"]`);
-//     const placeValue = placeSelect.value.trim() || "Sin lugar definido";
-//     finalMessage += `Lugar: ${placeValue}\n\n`;
-
-//     // Diálogos
-//     const dialogueGroups = scene.querySelectorAll(".dialogue-group");
-//     dialogueGroups.forEach((dg) => {
-//       // const charSelect = dg.querySelector(`select[name="character_${index}[]"]`);
-//       // const characterValue = charSelect.value.trim() || "Personaje desconocido";
-//       const charInput = dg.querySelector(`input[name="character_${index}[]"]`);
-//       const characterValue = (charInput && charInput.value.trim()) || "Personaje desconocido";
-
-//       const emoSelect = dg.querySelector(`select[name="emotion_${index}[]"]`);
-//       const emotionValue = emoSelect.value.trim() || "Sin emoción";
-
-//       const dialogueInput = dg.querySelector(`textarea[name="dialogueText_${index}[]"]`);
-//       const dialogueValue = dialogueInput.value.trim() || "Diálogo vacío";
-
-//       finalMessage += `Personaje: ${characterValue} | Emoción: ${emotionValue}\n`;
-//       finalMessage += `Diálogo: ${dialogueValue}\n\n`;
-//     });
-
-//     finalMessage += "-----------------------------\n\n";
-//   });
-
-//   // Vista previa
-//   document.getElementById("logContent").innerText = finalMessage;
-
-//   // Enviar el JSON a Netlify
-//   sendDialogToGitHub(finalMessage);
-// });
 
 /**********************************************
  * 9. Función para enviar el JSON a Netlify (serverless)
@@ -440,52 +485,6 @@ let pendingMessage = "";
 /**********************************************
  * 2) Botón "Enviar" (dos pasos)
  **********************************************/
-// sendAllBtn.addEventListener("click", () => {
-//   let finalMessage = "";
-//   const allScenes = document.querySelectorAll(".scene-block");
-
-//   if (allScenes.length === 0) {
-//     alert("No has agregado ninguna escena.");
-//     return;
-//   }
-
-//   allScenes.forEach((scene, index) => {
-//     finalMessage += `=== Escena #${index + 1} ===\n`;
-
-//     // Ej: si tu "Lugar" está en un <select>
-//     const placeSelect = scene.querySelector(`select[name="scenePlace_${index}"]`);
-//     const placeValue = placeSelect?.value.trim() || "Sin lugar definido";
-//     finalMessage += `Lugar: ${placeValue}\n\n`;
-
-//     // Diálogos
-//     const dialogueGroups = scene.querySelectorAll(".dialogue-group");
-//     dialogueGroups.forEach((dg) => {
-//       // Personaje (usando input hidden o select, según tu implementación)
-//       const charInput = dg.querySelector(`input[name="character_${index}[]"]`);
-//       const characterValue = (charInput?.value.trim()) || "Personaje desconocido";
-
-//       // Emoción
-//       const emoSelect = dg.querySelector(`select[name="emotion_${index}[]"]`);
-//       const emotionValue = emoSelect?.value.trim() || "Sin emoción";
-
-//       // Texto
-//       const dialogueInput = dg.querySelector(`textarea[name="dialogueText_${index}[]"]`);
-//       const dialogueValue = (dialogueInput?.value.trim()) || "Diálogo vacío";
-
-//       finalMessage += `Personaje: ${characterValue} | Emoción: ${emotionValue}\n`;
-//       finalMessage += `Diálogo: ${dialogueValue}\n\n`;
-//     });
-
-//     finalMessage += "-----------------------------\n\n";
-//   });
-
-//   pendingMessage = finalMessage;
-
-//   // Mostramos en popup
-//   confirmationMessage.textContent = `Se enviará el siguiente contenido:\n\n${finalMessage}`;
-//   confirmationOverlay.style.display = "flex"; // mostrar overlay
-// });
-
 
 // Parte de tu "Enviar" (dos pasos)
 sendAllBtn.addEventListener("click", () => {
@@ -515,9 +514,14 @@ sendAllBtn.addEventListener("click", () => {
 
       const dialogueInput = dg.querySelector(`textarea[name="dialogueText_${index}[]"]`);
       const dialogueValue = dialogueInput?.value.trim() || "Diálogo vacío";
+      
+      // Onomatopeya
+      const onomaSelect = dg.querySelector(`select[name="onomatopeia_${index}[]"]`);
+      const onomaValue = onomaSelect ? onomaSelect.value.trim() : "";
 
       finalMessage += `Personaje: ${characterValue} | Emoción: ${emotionValue}\n`;
-      finalMessage += `Diálogo: ${dialogueValue}\n\n`;
+      finalMessage += `Diálogo: ${dialogueValue}\n`;
+      finalMessage += `Onomatopeya: ${onomaValue}\n\n`;
     });
     finalMessage += "-----------------------------\n\n";
   });
