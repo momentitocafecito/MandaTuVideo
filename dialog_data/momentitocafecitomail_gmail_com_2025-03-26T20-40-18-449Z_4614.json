@@ -1,0 +1,10 @@
+{
+  "usuario": "momentitocafecitomail@gmail.com",
+  "momento": "2025-03-26T20:40:18.449Z",
+  "contenido": "=== Escena #1 ===\nLugar: Sala de estar\n\nPersonaje: Juan | Emoción: Enojado\nDiálogo: Hola mundo, veremos si ya funcionan las onomatopeyas\nOnomatopeya: Bam\n\nPersonaje: Ana | Emoción: Feliz\nDiálogo: Claro\nOnomatopeya: \n\n-----------------------------\n\n=== Escena #2 ===\nLugar: Oficina\n\nPersonaje: Ana | Emoción: Feliz\nDiálogo: Sin Onomato\nOnomatopeya: \n\nPersonaje: Ana | Emoción: Feliz\nDiálogo: Capirotada extrema\nOnomatopeya: \n\n-----------------------------\n\n",
+  "otros": {
+    "ip": "127.0.0.1",
+    "note": "Información adicional",
+    "transformado": "false"
+  }
+}
