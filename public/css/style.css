@@ -259,3 +259,14 @@ body {
 #cancelSendBtn:hover {
   background-color: #777;
 }
+
+#confirmationModal pre {
+  white-space: pre-wrap;   /* respeta saltos de línea */
+  word-wrap: break-word;   /* larga sub-lineas */
+  max-height: 300px;       /* limite vertical */
+  overflow-y: auto;        /* scroll si excede el alto */
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+  padding: 10px;
+  border-radius: 4px;
+}

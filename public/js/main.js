@@ -333,49 +333,49 @@ addSceneBtn.addEventListener("click", () => {
  *    - Recorre las escenas/diálogos
  *    - Manda el contenido a GitHub (sendDialogToGitHub)
  **********************************************/
-sendAllBtn.addEventListener("click", () => {
-  let finalMessage = "";
-  const allScenes = document.querySelectorAll(".scene-block");
+// sendAllBtn.addEventListener("click", () => {
+//   let finalMessage = "";
+//   const allScenes = document.querySelectorAll(".scene-block");
 
-  if (allScenes.length === 0) {
-    alert("No has agregado ninguna escena.");
-    return;
-  }
+//   if (allScenes.length === 0) {
+//     alert("No has agregado ninguna escena.");
+//     return;
+//   }
 
-  allScenes.forEach((scene, index) => {
-    finalMessage += `=== Escena #${index + 1} ===\n`;
+//   allScenes.forEach((scene, index) => {
+//     finalMessage += `=== Escena #${index + 1} ===\n`;
 
-    const placeSelect = scene.querySelector(`select[name="scenePlace_${index}"]`);
-    const placeValue = placeSelect.value.trim() || "Sin lugar definido";
-    finalMessage += `Lugar: ${placeValue}\n\n`;
+//     const placeSelect = scene.querySelector(`select[name="scenePlace_${index}"]`);
+//     const placeValue = placeSelect.value.trim() || "Sin lugar definido";
+//     finalMessage += `Lugar: ${placeValue}\n\n`;
 
-    // Diálogos
-    const dialogueGroups = scene.querySelectorAll(".dialogue-group");
-    dialogueGroups.forEach((dg) => {
-      // const charSelect = dg.querySelector(`select[name="character_${index}[]"]`);
-      // const characterValue = charSelect.value.trim() || "Personaje desconocido";
-      const charInput = dg.querySelector(`input[name="character_${index}[]"]`);
-      const characterValue = (charInput && charInput.value.trim()) || "Personaje desconocido";
+//     // Diálogos
+//     const dialogueGroups = scene.querySelectorAll(".dialogue-group");
+//     dialogueGroups.forEach((dg) => {
+//       // const charSelect = dg.querySelector(`select[name="character_${index}[]"]`);
+//       // const characterValue = charSelect.value.trim() || "Personaje desconocido";
+//       const charInput = dg.querySelector(`input[name="character_${index}[]"]`);
+//       const characterValue = (charInput && charInput.value.trim()) || "Personaje desconocido";
 
-      const emoSelect = dg.querySelector(`select[name="emotion_${index}[]"]`);
-      const emotionValue = emoSelect.value.trim() || "Sin emoción";
+//       const emoSelect = dg.querySelector(`select[name="emotion_${index}[]"]`);
+//       const emotionValue = emoSelect.value.trim() || "Sin emoción";
 
-      const dialogueInput = dg.querySelector(`textarea[name="dialogueText_${index}[]"]`);
-      const dialogueValue = dialogueInput.value.trim() || "Diálogo vacío";
+//       const dialogueInput = dg.querySelector(`textarea[name="dialogueText_${index}[]"]`);
+//       const dialogueValue = dialogueInput.value.trim() || "Diálogo vacío";
 
-      finalMessage += `Personaje: ${characterValue} | Emoción: ${emotionValue}\n`;
-      finalMessage += `Diálogo: ${dialogueValue}\n\n`;
-    });
+//       finalMessage += `Personaje: ${characterValue} | Emoción: ${emotionValue}\n`;
+//       finalMessage += `Diálogo: ${dialogueValue}\n\n`;
+//     });
 
-    finalMessage += "-----------------------------\n\n";
-  });
+//     finalMessage += "-----------------------------\n\n";
+//   });
 
-  // Vista previa
-  document.getElementById("logContent").innerText = finalMessage;
+//   // Vista previa
+//   document.getElementById("logContent").innerText = finalMessage;
 
-  // Enviar el JSON a Netlify
-  sendDialogToGitHub(finalMessage);
-});
+//   // Enviar el JSON a Netlify
+//   sendDialogToGitHub(finalMessage);
+// });
 
 /**********************************************
  * 9. Función para enviar el JSON a Netlify (serverless)
@@ -440,6 +440,54 @@ let pendingMessage = "";
 /**********************************************
  * 2) Botón "Enviar" (dos pasos)
  **********************************************/
+// sendAllBtn.addEventListener("click", () => {
+//   let finalMessage = "";
+//   const allScenes = document.querySelectorAll(".scene-block");
+
+//   if (allScenes.length === 0) {
+//     alert("No has agregado ninguna escena.");
+//     return;
+//   }
+
+//   allScenes.forEach((scene, index) => {
+//     finalMessage += `=== Escena #${index + 1} ===\n`;
+
+//     // Ej: si tu "Lugar" está en un <select>
+//     const placeSelect = scene.querySelector(`select[name="scenePlace_${index}"]`);
+//     const placeValue = placeSelect?.value.trim() || "Sin lugar definido";
+//     finalMessage += `Lugar: ${placeValue}\n\n`;
+
+//     // Diálogos
+//     const dialogueGroups = scene.querySelectorAll(".dialogue-group");
+//     dialogueGroups.forEach((dg) => {
+//       // Personaje (usando input hidden o select, según tu implementación)
+//       const charInput = dg.querySelector(`input[name="character_${index}[]"]`);
+//       const characterValue = (charInput?.value.trim()) || "Personaje desconocido";
+
+//       // Emoción
+//       const emoSelect = dg.querySelector(`select[name="emotion_${index}[]"]`);
+//       const emotionValue = emoSelect?.value.trim() || "Sin emoción";
+
+//       // Texto
+//       const dialogueInput = dg.querySelector(`textarea[name="dialogueText_${index}[]"]`);
+//       const dialogueValue = (dialogueInput?.value.trim()) || "Diálogo vacío";
+
+//       finalMessage += `Personaje: ${characterValue} | Emoción: ${emotionValue}\n`;
+//       finalMessage += `Diálogo: ${dialogueValue}\n\n`;
+//     });
+
+//     finalMessage += "-----------------------------\n\n";
+//   });
+
+//   pendingMessage = finalMessage;
+
+//   // Mostramos en popup
+//   confirmationMessage.textContent = `Se enviará el siguiente contenido:\n\n${finalMessage}`;
+//   confirmationOverlay.style.display = "flex"; // mostrar overlay
+// });
+
+
+// Parte de tu "Enviar" (dos pasos)
 sendAllBtn.addEventListener("click", () => {
   let finalMessage = "";
   const allScenes = document.querySelectorAll(".scene-block");
@@ -449,41 +497,41 @@ sendAllBtn.addEventListener("click", () => {
     return;
   }
 
+  // Recorremos escenas y formamos finalMessage
   allScenes.forEach((scene, index) => {
     finalMessage += `=== Escena #${index + 1} ===\n`;
 
-    // Ej: si tu "Lugar" está en un <select>
     const placeSelect = scene.querySelector(`select[name="scenePlace_${index}"]`);
     const placeValue = placeSelect?.value.trim() || "Sin lugar definido";
     finalMessage += `Lugar: ${placeValue}\n\n`;
 
-    // Diálogos
     const dialogueGroups = scene.querySelectorAll(".dialogue-group");
     dialogueGroups.forEach((dg) => {
-      // Personaje (usando input hidden o select, según tu implementación)
       const charInput = dg.querySelector(`input[name="character_${index}[]"]`);
       const characterValue = (charInput?.value.trim()) || "Personaje desconocido";
 
-      // Emoción
       const emoSelect = dg.querySelector(`select[name="emotion_${index}[]"]`);
       const emotionValue = emoSelect?.value.trim() || "Sin emoción";
 
-      // Texto
       const dialogueInput = dg.querySelector(`textarea[name="dialogueText_${index}[]"]`);
-      const dialogueValue = (dialogueInput?.value.trim()) || "Diálogo vacío";
+      const dialogueValue = dialogueInput?.value.trim() || "Diálogo vacío";
 
       finalMessage += `Personaje: ${characterValue} | Emoción: ${emotionValue}\n`;
       finalMessage += `Diálogo: ${dialogueValue}\n\n`;
     });
-
     finalMessage += "-----------------------------\n\n";
   });
 
+  // Guardamos en variable global
   pendingMessage = finalMessage;
 
-  // Mostramos en popup
-  confirmationMessage.textContent = `Se enviará el siguiente contenido:\n\n${finalMessage}`;
-  confirmationOverlay.style.display = "flex"; // mostrar overlay
+  // En lugar de textContent, usamos innerHTML con <pre>
+  confirmationMessage.innerHTML = `
+    <p><strong>Se enviará el siguiente contenido:</strong></p>
+    <pre>${finalMessage}</pre>
+  `;
+  
+  confirmationOverlay.style.display = "flex"; // Muestra el popup
 });
 
 
