@@ -24,13 +24,15 @@ jobs:
           echo "Changed files:"
           cat changed_files.txt
 
-      # ================= NUEVO PASO: Filtrar archivos permitidos y actualizar CSV =================
       - name: Filter allowed and update CSV
+        id: filter
         run: |
-          npm install csv-parse csv-stringify  # o si ya lo usas en package.json
+          npm install csv-parse csv-stringify
           node scripts/filterAllowed.js changed_files.txt
 
+      # Solo se ejecuta si approved_count != 0
       - name: Check out external repo
+        if: steps.filter.outputs.approved_count != '0'
         uses: actions/checkout@v2
         with:
           repository: ${{ secrets.EXTERNAL_REPO }}
@@ -39,6 +41,7 @@ jobs:
           persist-credentials: false
 
       - name: Copy new processed files
+        if: steps.filter.outputs.approved_count != '0'
         run: |
           while read file; do
             [ -z "$file" ] && continue
@@ -46,6 +49,7 @@ jobs:
           done < approved_files.txt
 
       - name: Commit & push to external repo
+        if: steps.filter.outputs.approved_count != '0'
         run: |
           cd external_repo
           git config user.name "github-actions[bot]"
