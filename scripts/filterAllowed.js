@@ -1,10 +1,10 @@
 // scripts/filterAllowed.js
-
 const fs = require('fs');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 
 // Este script se corre con "node filterAllowed.js changed_files.txt"
+// Mantiene la misma lógica, pero ahora lee/escribe la tabla "patreons" en Supabase.
 
 (async () => {
   try {
@@ -28,9 +28,10 @@ const { createClient } = require('@supabase/supabase-js');
     // 2.2) Llevaremos la cuenta de cuántos archivos sí fueron aprobados
     let approvedCount = 0;
 
-    // --- Conectar a Supabase ---
+    // --- Conectar a Supabase usando SECRETS definidas en GitHub ---
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error("Faltan credenciales de Supabase (SUPABASE_URL o SUPABASE_ANON_KEY).");
       process.exit(1);
@@ -38,11 +39,19 @@ const { createClient } = require('@supabase/supabase-js');
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // 3) Cargar los registros desde la tabla patreons en memoria (simulando el "csvContent")
+    // 3) Obtener todos los registros desde la tabla "patreons"
     console.log("Obteniendo registros de 'patreons'...");
     const { data: records, error: errSelect } = await supabase
       .from('patreons')
-      .select('mescenas,correo_mescenas,tipo_suscript,fecha_suscript,cuota_mensual,videos_procesados,videos_enviados');
+      .select(`
+        mescenas,
+        correo_mescenas,
+        tipo_suscript,
+        fecha_suscript,
+        cuota_mensual,
+        videos_procesados,
+        videos_enviados
+      `);
 
     if (errSelect) {
       console.error("Error al obtener registros de 'patreons':", errSelect);
@@ -53,8 +62,7 @@ const { createClient } = require('@supabase/supabase-js');
       process.exit(1);
     }
 
-    // 3.1) Para rastrear cuáles rows se modifican
-    // Agregamos una propiedad "_updated" en memoria
+    // 3.1) Para rastrear qué filas se modifican, agregamos un flag _updated:
     for (const r of records) {
       r._updated = false;
     }
@@ -73,30 +81,23 @@ const { createClient } = require('@supabase/supabase-js');
         continue;
       }
 
-      // 5) Buscar en 'records' dónde correo_mescenas == url (ignorando mayúsc-minúsc)
+      // 5) Buscar en records dónde correo_mescenas == url (ign. mayúsc/minúsc)
       const matchingIndex = records.findIndex(r => 
         r.correo_mescenas.trim().toLowerCase() === url.trim().toLowerCase()
       );
-
       if (matchingIndex === -1) {
         console.log(`No mecenas found for ${url}, skipping ${file}`);
         continue;
       }
 
-      // 6) Revisar si (cuota_mensual - videos_enviados) > 0,
-      //    pero en el script original usabas (cuota - videosProcesados):
-      //    "if ((cuota - videosProcesados) > 0) { ... }"
-      //    Observa que en el original se usaba videos_enviados? O videos_procesados?
-      //    Tu snippet dice: "Si (cuota - videos_procesados) > 0"
-
+      // 6) Revisar si (cuota_mensual - videos_procesados) > 0
+      //    (Manteniendo la lógica original)
       const row = records[matchingIndex];
       const cuota = parseInt(row.cuota_mensual, 10) || 0;
       const videosProcesados = parseInt(row.videos_procesados, 10) || 0;
-      // (En tu snippet, "videos_enviados" y "videos_procesados" se mezclan;
-      //  asumo que el check es (cuota_mensual - videos_procesados) > 0)
 
       if ((cuota - videosProcesados) > 0) {
-        // Aumentamos videos_procesados
+        // OK: actualizamos videos_procesados + 1
         row.videos_procesados = (videosProcesados + 1).toString();
         row._updated = true; // Marcamos que se cambió
 
@@ -115,24 +116,25 @@ const { createClient } = require('@supabase/supabase-js');
     let updatesCount = 0;
     for (const r of records) {
       if (r._updated) {
-        // Hacemos un update row by row:
-        // "UPDATE patreons SET videos_procesados = r.videos_procesados
-        //  WHERE correo_mescenas = r.correo_mescenas"
+        // Hacemos un update row by row en Supabase:
+        const newValue = parseInt(r.videos_procesados, 10);
+        const correo = r.correo_mescenas.trim().toLowerCase();
+
         const { error: errUpdate } = await supabase
           .from('patreons')
-          .update({ videos_procesados: parseInt(r.videos_procesados, 10) })
-          .eq('correo_mescenas', r.correo_mescenas.trim().toLowerCase());
+          .update({ videos_procesados: newValue })
+          .eq('correo_mescenas', correo);
 
         if (errUpdate) {
           console.error(`Error actualizando videos_procesados para ${r.mescenas}:`, errUpdate);
-          // No hacemos exit(1) porque tal vez el resto funcionó
+          // No detenemos el proceso, continuamos con los demás
         } else {
           updatesCount++;
         }
       }
     }
 
-    console.log(`Filtering done. Approved files in approved_files.txt. Updated rows in Supabase: ${updatesCount}`);
+    console.log(`Filtering done. Updated rows in Supabase: ${updatesCount}. Approved files in approved_files.txt.`);
 
     // 8) Exponer approvedCount a GitHub Actions
     if (process.env.GITHUB_OUTPUT) {
@@ -142,7 +144,7 @@ const { createClient } = require('@supabase/supabase-js');
       console.log(`approved_count=${approvedCount} => (no GITHUB_OUTPUT available, local run?)`);
     }
 
-    // 9) Si no hay archivos aprobados, podemos hacer logs extra
+    // 9) Si no hay archivos aprobados
     if (approvedCount === 0) {
       console.log("No files approved, process can skip sending them.");
     }

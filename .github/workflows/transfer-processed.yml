@@ -9,6 +9,7 @@ on:
 jobs:
   copy-to-maas:
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out current repo
         uses: actions/checkout@v2
@@ -26,9 +27,20 @@ jobs:
 
       - name: Filter allowed and update CSV
         id: filter
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          npm install csv-parse csv-stringify
+          # Instalamos la librería de Supabase
+          npm install @supabase/supabase-js
+          # Ejecutamos el script
           node scripts/filterAllowed.js changed_files.txt
+          
+          # Tomar la variable approved_count del archivo GITHUB_OUTPUT
+          # y exponerla como output de este paso
+          if [ -f $GITHUB_OUTPUT ]; then
+            echo "approved_count=$(grep approved_count $GITHUB_OUTPUT | cut -d= -f2)" >> $GITHUB_OUTPUT
+          fi
 
       # Solo se ejecuta si approved_count != 0
       - name: Check out external repo
