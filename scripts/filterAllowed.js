@@ -62,10 +62,10 @@ const CSV_PATH = path.join(__dirname, '..', 'data', 'data.csv');
       // 6) Revisar si (cuota_mensual - videos_enviados) > 0
       const row = records[matchingIndex];
       const cuota = parseInt(row.cuota_mensual, 10) || 0;
-      const videosEnviados = parseInt(row.videos_enviados, 10) || 0;
+      const videosEnviados = parseInt(row.videos_enviados, 10) || 0;// Si hay errores con la otra parte, ya no lo se, por ahora funciona
       const videosProcesados = parseInt(row.videos_procesados, 10) || 0;
 
-      if ((cuota - videosEnviados) > 0) {
+      if ((cuota - videosProcesados) > 0) {
         // OK: actualizamos videos_procesados + 1
         records[matchingIndex].videos_procesados = (videosProcesados + 1).toString();
 
