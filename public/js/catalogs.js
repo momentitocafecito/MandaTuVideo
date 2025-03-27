@@ -1,18 +1,27 @@
 // Catálogo de lugares
 const PLACES_CATALOG = [
-    "Sala de estar",
-    "Cocina",
-    "Oficina",
+    "Cafetería",
     "Calle",
-    "Restaurante"
+    "Oficina",
+    "Elevador",
+    "Parque",
+    "Pasillo",
+    "Puerta",
+    "Sala",
+    "Tren"
   ];
   
   const CHARACTERS_WITH_IMAGES = [
-    { name: "Ana", image: "/images/characters/Ana.png" },
-    { name: "Carlos", image: "/images/characters/Carlos.png" },
-    { name: "Juan", image: "/images/characters/Juan.png" },
-    { name: "Lucia", image: "/images/characters/Lucia.png" },
-    { name: "Maria", image: "/images/characters/Maria.png" }
+    { name: "Gata", image: "/images/characters/Ana.png" },
+    { name: "Conejo", image: "/images/characters/Carlos.png" },
+    { name: "Cactus", image: "/images/characters/Juan.png" },
+    { name: "Pata", image: "/images/characters/Lucia.png" },
+    { name: "Coneja", image: "/images/characters/Maria.png" },
+    { name: "Kiwi", image: "/images/characters/Kiwi.png" },
+    { name: "Pato", image: "/images/characters/Pato.png" },
+    { name: "Pollo", image: "/images/characters/Pollo.png" },
+    { name: "RR", image: "/images/characters/RR.png" },
+    { name: "Roca", image: "/images/characters/Roca.png" },
   ];
 
   // Catálogo de emociones
@@ -21,14 +30,43 @@ const PLACES_CATALOG = [
     "Triste",
     "Enojado",
     "Sorprendido",
-    "Nervioso"
+    "Nervioso", 
+    "Confundido",
+    "Serio",
   ];
   
   // Catálogo de onomatopeyas
 const ONOMATOPEIAS_CATALOG = [
-  "Pow",
-  "Auch",
-  "Bam",
-  "Zing",
-  "Puf"
+  'Snif, snif',
+  'Cof, cof',
+  '¿Eh?',
+  'Zzzz',
+  'Hmm',
+  'Shhh',
+  'Jaja',
+  'Ay',
+  'Eh',
+  '¡Uh!',
+  'Bu',
+  'Uh-oh',
+  'Tsk, tsk',
+  'Huh',
+  'Brrr',
+  'Achoo',
+  'Boo',
+  'Ahhhh',
+  'Yay',
+  'Eek',
+  'Psst',
+  'Ugh',
+  '¡Aha!',
+  'Wow',
+  '¡Ah...!',
+  'Gruñido',
+  'Braaaack',
+  'Prrrrt',
+  'Dum!',
+  'Bip bip',
+  ':(',
+  '...'
 ];
