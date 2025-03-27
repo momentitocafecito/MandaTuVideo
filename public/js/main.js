@@ -358,6 +358,29 @@ addSceneBtn.addEventListener("click", () => {
  * 9. Evento: "Enviar" Todo
  **********************************************/
 sendAllBtn.addEventListener("click", () => {
+  // Primero: verificar la cuota disponible
+  const cuotaElement = document.getElementById("cuotaMensual");
+  const videosElement = document.getElementById("videosProcesados");
+  const cuota = parseInt(cuotaElement ? cuotaElement.textContent : "0", 10) || 0;
+  const videos = parseInt(videosElement ? videosElement.textContent : "0", 10) || 0;
+
+  if ((cuota - videos) <= 0) {
+    // Desplegar mensaje de error con logos y enlaces
+    confirmationMessage.innerHTML = `
+      <p>
+        Parece que no tienes Cuota. Actualiza tu suscripción en Patreon o mándame mensaje
+        <a href="https://www.patreon.com/messages/?mode=user&tab=chats" target="_blank">
+          <img src="/images/characters/patreon.png" alt="Logo Patreon" style="width:20px; height:20px;">
+        </a>
+        <a href="https://www.instagram.com/momentitocafecito/#" target="_blank">
+          <img src="/images/characters/instagram.png" alt="Logo Instagram" style="width:20px; height:20px;">
+        </a>
+      </p>
+    `;
+    confirmationOverlay.style.display = "flex";
+    return;
+  }
+
   let finalMessage = "";
   const allScenes = document.querySelectorAll(".scene-block");
 
