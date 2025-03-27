@@ -37,6 +37,14 @@
 
     <h1>Crear Escenas y Diálogos</h1>
     <div id="charCounter">0 / 400</div>
+
+    <!-- Indicadores Patreon -->
+    <div id="patreonInfo">
+      <span>Fecha Suscripción: <span id="fechaSuscript">0</span></span> | 
+      <span>Cuota Mensual: <span id="cuotaMensual">0</span></span> | 
+      <span>Videos Procesados: <span id="videosProcesados">0</span></span>
+    </div>
+
     <!-- CONTENEDOR PRINCIPAL DE ESCENAS -->
     <div id="scenesContainer">
       <!-- Se agregarán las escenas de forma dinámica -->
@@ -60,8 +68,9 @@
     </div> -->
       <!-- NUEVO: Sección para registrar "Nombre Patreon" -->
     <h2>(Solo la primera vez): Registrar usuario Patreon</h2>
+    <h4>Si sale un error, contacta JC en Patreon</h4>
     <div id="registroContainer">
-      <label for="nombrePatreonInput">Nombre Patreon:</label>
+      <label for="nombrePatreonInput">Nombre en Patreon:</label>
       <input type="text" id="nombrePatreonInput" placeholder="Ingresa tu nombre de Patreon">
       <button id="registrarCorreoBtn">Registrar</button>
     </div>
@@ -84,9 +93,13 @@
   </div>
 
   <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.js"></script>
+
   <!-- Catálogos -->
   <script src="js/catalogs.js"></script>
   <!-- Lógica Principal -->
   <script src="js/main.js"></script>
+  <!-- Script que calcula la cuota y muestra los indicadores -->
+  <script src="js/calculate_quota.js"></script>
 </body>
 </html>
