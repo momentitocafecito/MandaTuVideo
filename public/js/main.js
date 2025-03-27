@@ -624,23 +624,11 @@ function showSuccessMessage() {
 
 // ... el resto de tu main.js ...
 // Referencias
-const nombrePatreonInput = document.getElementById("nombrePatreonInput");
-const registrarCorreoBtn = document.getElementById("registrarCorreoBtn");
-
-// Escucha el clic en "Registrar Correo"
+// const nombrePatreonInput = document.getElementById("nombrePatreonInput");
+// const registrarCorreoBtn = document.getElementById("registrarCorreoBtn");
 registrarCorreoBtn.addEventListener("click", () => {
   const nombrePatreon = nombrePatreonInput.value.trim();
   const correoUsuario = window.loggedInUserEmail || "";
-
-  // Validaciones mínimas
-  if (!correoUsuario) {
-    alert("No hay un correo de usuario logueado. Inicia sesión primero.");
-    return;
-  }
-  if (!nombrePatreon) {
-    alert("Debes ingresar un Nombre Patreon válido.");
-    return;
-  }
 
   fetch("/.netlify/functions/registro", {
     method: "POST",
@@ -650,14 +638,9 @@ registrarCorreoBtn.addEventListener("click", () => {
   .then(res => res.json())
   .then(data => {
     if (data.error) {
-      alert("Error al registrar: " + data.error);
+      alert("Error: " + data.error);
     } else {
-      alert("Registro exitoso: " + data.message);
-      nombrePatreonInput.value = "";
+      alert("Registrado: " + data.message);
     }
-  })
-  .catch(err => {
-    console.error("Error en la petición:", err);
-    alert("Ocurrió un error inesperado al registrar.");
   });
 });
