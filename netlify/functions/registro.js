@@ -19,15 +19,16 @@ exports.handler = async (event) => {
     const { nombrePatreon, correoUsuario } = body;
     console.log("nombrePatreon:", nombrePatreon, "| correoUsuario:", correoUsuario);
 
+    // Validar inputs
     if (!nombrePatreon || !nombrePatreon.trim()) {
-      console.log("Nombre Patreon vacío");
+      console.log("Nombre Patreon vacío o no definido");
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'El Nombre Patreon está vacío' })
       };
     }
     if (!correoUsuario || !correoUsuario.trim()) {
-      console.log("Correo vacío");
+      console.log("Correo vacío o no definido");
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'No hay un correo válido' })
@@ -48,12 +49,19 @@ exports.handler = async (event) => {
     console.log("Creando cliente de supabase...");
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // 1) Verificar nombrePatreon en nombrespermitidos
-    console.log("Buscando en nombrespermitidos:", nombrePatreon.trim());
+    // (DEBUG) Ver todos los registros de nombrespermitidos
+    // para confirmar qué hay en la BD
+    const { data: debugAll, error: errDebugAll } = await supabase
+      .from('nombrespermitidos')
+      .select('*');
+    console.log("DEBUG - todos los nombrespermitidos:", debugAll, " error:", errDebugAll);
+
+    // 1) Verificar que nombrePatreon esté en la tabla nombrespermitidos
+    console.log("Buscando en nombrespermitidos con eq =>", nombrePatreon.trim());
     const { data: allowedRows, error: errAllowed } = await supabase
       .from('nombrespermitidos')
       .select('id, mescenas, status')
-      .eq('mescenas', nombrePatreon.trim());
+      .ilike('mescenas', nombrePatreon.trim());  // exact match
 
     if (errAllowed) {
       console.log("Error consultando nombrespermitidos:", errAllowed);
@@ -74,7 +82,7 @@ exports.handler = async (event) => {
       };
     }
 
-    // 2) Verificar correoUsuario en patreons
+    // 2) Verificar que el correo no exista en la tabla patreons
     const correoLower = correoUsuario.trim().toLowerCase();
     console.log("Buscando en patreons si existe correo:", correoLower);
     const { data: existing, error: errExisting } = await supabase
