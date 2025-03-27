@@ -480,7 +480,7 @@ function showSuccessMessage() {
   // Cerrar en 5 segundos
   setTimeout(() => {
     successOverlay.style.display = "none";
-  }, 5000);
+  }, 5500);
 }
 
 /**********************************************

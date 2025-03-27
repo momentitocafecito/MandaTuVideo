@@ -46,26 +46,43 @@ exports.handler = async (event) => {
         body: JSON.stringify({ error: 'Faltan credenciales de Supabase en Netlify' })
       };
     }
-    console.log("Creando cliente de supabase...");
+    console.log("Creando cliente de Supabase...");
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // --- Nuevo bloque de debug: Consultar todas las tablas del esquema "public" ---
-    console.log("Consultando lista de tablas en el esquema public...");
-    const { data: tableList, error: tableError } = await supabase
-      .from('information_schema.tables')
+    // 0) CONFIRMAR QUE nombrespermitidos NO ESTÉ VACÍA
+    console.log("Verificando si 'nombrespermitidos' tiene datos...");
+    const { data: firstRows, error: errFirst } = await supabase
+      .from('nombrespermitidos')
       .select('*')
-      .ilike('table_schema', 'public');
-    console.log("Available tables in public:", tableList, "error:", tableError);
-    // ---------------------------------------------------------------------------
+      .limit(2);
+
+    if (errFirst) {
+      console.log("Error leyendo la tabla nombrespermitidos:", errFirst);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'No se pudo leer la tabla nombrespermitidos',
+          details: errFirst
+        })
+      };
+    }
+    console.log("Primeros 2 registros de nombrespermitidos:", firstRows);
+    if (!firstRows || firstRows.length === 0) {
+      console.log("La tabla nombrespermitidos está vacía. Terminando proceso.");
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "No hay registros en nombrespermitidos. Registra algo primero." })
+      };
+    }
 
     // 1) Verificar que nombrePatreon esté en la tabla nombrespermitidos
-    // Convertir el valor a minúsculas para comparación (si es necesario)
+    //    Usamos ilike para comparación case-insensitive
     const nombreConsulta = nombrePatreon.trim().toLowerCase();
-    console.log("Buscando en nombrespermitidos con eq =>", nombreConsulta);
+    console.log("Buscando en nombrespermitidos con ilike =>", nombreConsulta);
     const { data: allowedRows, error: errAllowed } = await supabase
       .from('nombrespermitidos')
       .select('id, mescenas, status')
-      .ilike('mescenas', nombreConsulta);  // Utilizamos ilike para comparación case-insensitive
+      .ilike('mescenas', nombreConsulta);
 
     if (errAllowed) {
       console.log("Error consultando nombrespermitidos:", errAllowed);
@@ -78,6 +95,7 @@ exports.handler = async (event) => {
       };
     }
     console.log("allowedRows:", allowedRows);
+
     if (!allowedRows || allowedRows.length === 0) {
       console.log("El Nombre Patreon no está permitido.");
       return {
@@ -112,7 +130,7 @@ exports.handler = async (event) => {
 
     // 3) Insertar en patreons
     const fechaISO = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-    const cutoffDate = '9999-12-31'; // Puedes modificar este valor según lo necesites
+    const cutoffDate = '9999-12-31'; // Ajusta si quieres otra fecha
 
     console.log("Insertando registro en patreons...");
     const { data: inserted, error: errInsert } = await supabase
