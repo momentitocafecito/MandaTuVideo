@@ -49,19 +49,23 @@ exports.handler = async (event) => {
     console.log("Creando cliente de supabase...");
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // (DEBUG) Ver todos los registros de nombrespermitidos
-    // para confirmar qué hay en la BD
-    const { data: debugAll, error: errDebugAll } = await supabase
-      .from('nombrespermitidos')
-      .select('*');
-    console.log("DEBUG - todos los nombrespermitidos:", debugAll, " error:", errDebugAll);
+    // --- Nuevo bloque de debug: Consultar todas las tablas del esquema "public" ---
+    console.log("Consultando lista de tablas en el esquema public...");
+    const { data: tableList, error: tableError } = await supabase
+      .from('information_schema.tables')
+      .select('*')
+      .ilike('table_schema', 'public');
+    console.log("Available tables in public:", tableList, "error:", tableError);
+    // ---------------------------------------------------------------------------
 
     // 1) Verificar que nombrePatreon esté en la tabla nombrespermitidos
-    console.log("Buscando en nombrespermitidos con eq =>", nombrePatreon.trim());
+    // Convertir el valor a minúsculas para comparación (si es necesario)
+    const nombreConsulta = nombrePatreon.trim().toLowerCase();
+    console.log("Buscando en nombrespermitidos con eq =>", nombreConsulta);
     const { data: allowedRows, error: errAllowed } = await supabase
       .from('nombrespermitidos')
       .select('id, mescenas, status')
-      .ilike('mescenas', nombrePatreon.trim());  // exact match
+      .ilike('mescenas', nombreConsulta);  // Utilizamos ilike para comparación case-insensitive
 
     if (errAllowed) {
       console.log("Error consultando nombrespermitidos:", errAllowed);
@@ -108,7 +112,7 @@ exports.handler = async (event) => {
 
     // 3) Insertar en patreons
     const fechaISO = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-    const cutoffDate = '9999-12-31';
+    const cutoffDate = '9999-12-31'; // Puedes modificar este valor según lo necesites
 
     console.log("Insertando registro en patreons...");
     const { data: inserted, error: errInsert } = await supabase
