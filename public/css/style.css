@@ -274,4 +274,10 @@ body {
 
 #registroContainer {
   margin-bottom: 20px;
+
+}
+
+#patreonInfo {
+  text-align: right;              /* Alinea el contenido a la derecha */
+  font-size: 14px;                /* Tamaño de fuente un poco más pequeño */
 }

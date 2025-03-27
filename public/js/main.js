@@ -31,6 +31,8 @@ function handleCredentialResponse(response) {
   // Ocultar loginSection, mostrar mainContent
   document.getElementById("loginSection").style.display = "none";
   document.getElementById("mainContent").style.display = "block";
+
+  refreshPatreonInfo();
 }
 
 /**********************************************
@@ -517,3 +519,27 @@ registrarCorreoBtn.addEventListener("click", () => {
       alert("Ocurrió un error inesperado al registrar: " + err);
     });
 });
+
+
+
+// Función para actualizar los indicadores de cuota desde Netlify Functions
+async function refreshPatreonInfo() {
+  if (!window.loggedInUserEmail) return;
+  
+  try {
+    const response = await fetch(
+      `/.netlify/functions/calculate_quota?email=${encodeURIComponent(window.loggedInUserEmail)}`
+    );
+    if (!response.ok) {
+      console.error("Error al obtener información de cuota", response.statusText);
+      return;
+    }
+    const data = await response.json();
+    // Actualizar los elementos de la UI
+    document.getElementById("fechaSuscript").textContent    = data.fecha_suscript || 0;
+    document.getElementById("cuotaMensual").textContent     = data.cuota_mensual || 0;
+    document.getElementById("videosProcesados").textContent = data.videos_procesados || 0;
+  } catch (error) {
+    console.error("Error en refreshPatreonInfo:", error);
+  }
+}
