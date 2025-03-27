@@ -1,11 +1,9 @@
 // netlify/functions/registro.js
-const fs = require('fs');
-const path = require('path');
-const { parse } = require('csv-parse/sync');
-const { stringify } = require('csv-stringify/sync');
+const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async (event) => {
   try {
+    // Solo POST
     if (event.httpMethod !== 'POST') {
       return {
         statusCode: 405,
@@ -13,8 +11,8 @@ exports.handler = async (event) => {
       };
     }
 
+    // 1) Parsear body
     const body = JSON.parse(event.body);
-
     const { nombrePatreon, correoUsuario } = body;
     if (!nombrePatreon || !correoUsuario) {
       return {
@@ -23,81 +21,81 @@ exports.handler = async (event) => {
       };
     }
 
-    // Rutas a tus CSV
-    const nombresPermitidosPath = path.join(__dirname, '..', '..', 'data', 'nombrespermitidos.csv');
-    const dataCSVPath = path.join(__dirname, '..', '..', 'data', 'data.csv');
-
-    // 1) Verificar que nombrePatreon esté en nombrespermitidos.csv
-    if (!fs.existsSync(nombresPermitidosPath)) {
+    // 2) Conectar a Supabase
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: 'No se encontró nombrespermitidos.csv en data/' })
+        body: JSON.stringify({ error: 'Faltan credenciales de Supabase en Netlify' })
       };
     }
-    const allowedRaw = fs.readFileSync(nombresPermitidosPath, 'utf8');
-    // nombrespermitidos.csv no tiene cabecera, una línea por nombre
-    // Dividimos en líneas, quitamos vacíos
-    const allowedNames = allowedRaw.split('\n').map(l => l.trim()).filter(Boolean);
-    const nombreLower = nombrePatreon.trim().toLowerCase();
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    const foundName = allowedNames.find(n => n.trim().toLowerCase() === nombreLower);
-    if (!foundName) {
+    // 3) Verificar que nombrePatreon esté en la lista 'nombrespermitidos' (tabla o array)
+    //   En Supabase, puedes hacer una tabla 'nombrespermitidos' (o un array local).
+    //   Para simplificar, supongamos es una tabla 'nombrespermitidos' con columna 'nombre'.
+    const { data: allowedNames, error: errAllowed } = await supabase
+      .from('nombrespermitidos') // o la tabla que definiste
+      .select('nombre')
+      .eq('nombre', nombrePatreon);
+    if (errAllowed) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Error buscando en nombrespermitidos', details: errAllowed })
+      };
+    }
+    if (!allowedNames || allowedNames.length === 0) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'El Nombre Patreon no está permitido.' })
       };
     }
 
-    // 2) Verificar que correoUsuario no exista en data.csv en la columna correo_mescenas
-    if (!fs.existsSync(dataCSVPath)) {
+    // 4) Verificar que correoUsuario no exista en patreons
+    const { data: existing, error: errExisting } = await supabase
+      .from('patreons')
+      .select('correo_mescenas')
+      .eq('correo_mescenas', correoUsuario.toLowerCase());
+    if (errExisting) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: 'No se encontró data.csv en data/' })
+        body: JSON.stringify({ error: 'Error buscando en patreons', details: errExisting })
       };
     }
-    const dataRaw = fs.readFileSync(dataCSVPath, 'utf8');
-    // Parsear con csv-parse/sync
-    let records = parse(dataRaw, {
-      columns: true,
-      skip_empty_lines: true
-    });
-    // columns = ["mescenas","correo_mescenas","tipo_suscript","fecha_suscript","cuota_mensual","videos_procesados","videos_enviados"]
-
-    const correoLower = correoUsuario.trim().toLowerCase();
-    const alreadyExists = records.find(r => r.correo_mescenas.trim().toLowerCase() === correoLower);
-    if (alreadyExists) {
+    if (existing && existing.length > 0) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'El correo ya existe en data.csv' })
+        body: JSON.stringify({ error: 'El correo ya existe en la tabla patreons' })
       };
     }
 
-    // 3) Crear la nueva fila:
-    // mescenas, correo_mescenas, tipo_suscript, fecha_suscript, cuota_mensual, videos_procesados, videos_enviados
+    // 5) Insertar la nueva fila
     const fechaISO = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-    const newRow = {
-      mescenas: nombrePatreon.trim(),
-      correo_mescenas: correoUsuario.trim(),
-      tipo_suscript: 'becario',
-      fecha_suscript: fechaISO,
-      cuota_mensual: '2',
-      videos_procesados: '0',
-      videos_enviados: '0'
-    };
+    const { data: insertData, error: errInsert } = await supabase
+      .from('patreons')
+      .insert([{
+        mescenas: nombrePatreon.trim(),
+        correo_mescenas: correoUsuario.trim().toLowerCase(),
+        tipo_suscript: 'becario',
+        fecha_suscript: fechaISO,
+        cuota_mensual: 2,
+        videos_procesados: 0,
+        videos_enviados: 0
+      }]);
 
-    // 4) Agregar a records y guardar
-    records.push(newRow);
-    const output = stringify(records, {
-      header: true,
-      columns: Object.keys(records[0]) // usar las mismas columnas en orden
-    });
-    fs.writeFileSync(dataCSVPath, output, 'utf8');
+    if (errInsert) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Error insertando en patreons', details: errInsert })
+      };
+    }
 
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: 'Registro exitoso en data.csv',
-        newRow
+        message: 'Registro exitoso en patreons (Supabase)',
+        row: insertData
       })
     };
 

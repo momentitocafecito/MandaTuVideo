@@ -4,7 +4,8 @@
     "dependencies": {
       "node-fetch": "^2.6.9",
       "csv-parse": "^5.4.0",
-      "csv-stringify": "^6.3.0"
+      "csv-stringify": "^6.3.0",
+      "@supabase/supabase-js": "^2.39.6"
     }
   }
   

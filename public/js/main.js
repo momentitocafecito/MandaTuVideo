@@ -632,35 +632,32 @@ registrarCorreoBtn.addEventListener("click", () => {
   const nombrePatreon = nombrePatreonInput.value.trim();
   const correoUsuario = window.loggedInUserEmail || "";
 
+  // Validaciones mínimas
   if (!correoUsuario) {
-    alert("No hay un correo de usuario logueado o no se ha detectado. Inicia sesión primero.");
+    alert("No hay un correo de usuario logueado. Inicia sesión primero.");
     return;
   }
-
   if (!nombrePatreon) {
     alert("Debes ingresar un Nombre Patreon válido.");
     return;
   }
 
-  // Hacer POST a la netlify function "registro.js"
   fetch("/.netlify/functions/registro", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ nombrePatreon, correoUsuario })
   })
-    .then(res => res.json())
-    .then(data => {
-      if (data.error) {
-        alert("Error al registrar: " + data.error);
-      } else {
-        alert("Registro exitoso: " + data.message);
-        // Podrías limpiar el input
-        nombrePatreonInput.value = "";
-      }
-    })
-    .catch(err => {
-      console.error("Error en la petición:", err);
-      alert("Ocurrió un error inesperado al registrar.");
-    });
+  .then(res => res.json())
+  .then(data => {
+    if (data.error) {
+      alert("Error al registrar: " + data.error);
+    } else {
+      alert("Registro exitoso: " + data.message);
+      nombrePatreonInput.value = "";
+    }
+  })
+  .catch(err => {
+    console.error("Error en la petición:", err);
+    alert("Ocurrió un error inesperado al registrar.");
+  });
 });
-
