@@ -1,12 +1,7 @@
-name: Transfer processed JSON to MAAS Secure
-
-permissions:
-  contents: write
+name: Transfer processed JSON to MAAS
 
 on:
   push:
-    branches:
-      - main
     paths:
       - 'dialog_data_processed/**'
   workflow_dispatch:
@@ -21,31 +16,36 @@ jobs:
           token: ${{ secrets.PAT_TOKEN }}
           persist-credentials: false
 
-      - name: Identify changed files in dialog_data_processed
+      - name: Identify changed files
         id: diff
         run: |
           git fetch --depth=2
-          # Solo archivos agregados (A)
           git diff --name-only --diff-filter=A HEAD^ HEAD -- dialog_data_processed/ > changed_files.txt
           echo "Changed files:"
           cat changed_files.txt
 
-      - name: Check out external repo (Secure)
+      # ================= NUEVO PASO: Filtrar archivos permitidos y actualizar CSV =================
+      - name: Filter allowed and update CSV
+        run: |
+          npm install csv-parse csv-stringify  # o si ya lo usas en package.json
+          node scripts/filterAllowed.js changed_files.txt
+
+      - name: Check out external repo
         uses: actions/checkout@v2
         with:
-          repository: ${{ secrets.EXTERNAL_REPO }}  # Ej.: "jcval94chat/MAAS"
+          repository: ${{ secrets.EXTERNAL_REPO }}
           token: ${{ secrets.EXTERNAL_PAT }}
           path: external_repo
           persist-credentials: false
 
-      - name: Copy new processed files to external repo
+      - name: Copy new processed files
         run: |
           while read file; do
             [ -z "$file" ] && continue
             cp "$file" external_repo/${{ secrets.EXTERNAL_TARGET_PATH }}
-          done < changed_files.txt
+          done < approved_files.txt
 
-      - name: Commit and push changes to external repo
+      - name: Commit & push to external repo
         run: |
           cd external_repo
           git config user.name "github-actions[bot]"
@@ -54,3 +54,14 @@ jobs:
           git commit -m "Auto-transfer new processed JSON file(s)" || echo "No changes to commit"
           git remote set-url origin https://x-access-token:${{ secrets.EXTERNAL_PAT }}@github.com/${{ secrets.EXTERNAL_REPO }}.git
           git push origin HEAD:${{ secrets.EXTERNAL_BRANCH }}
+
+      - name: Commit and push changes to current repo
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/data.csv
+          git commit -m "Update videos_procesados after filterAllowed" || echo "No changes to commit"
+          git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/momentitocafecito/MandaTuVideo.git
+          git push origin HEAD:$(git rev-parse --abbrev-ref HEAD)
