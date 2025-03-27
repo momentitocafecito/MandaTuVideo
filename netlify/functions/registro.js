@@ -3,7 +3,6 @@ const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async (event) => {
   try {
-    // Solo POST
     if (event.httpMethod !== 'POST') {
       return {
         statusCode: 405,
@@ -21,7 +20,7 @@ exports.handler = async (event) => {
       };
     }
 
-    // 2) Conectar a Supabase
+    // 2) Conectar a Supabase (variables de entorno en Netlify)
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -32,25 +31,25 @@ exports.handler = async (event) => {
     }
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // 3) Verificar que nombrePatreon esté en la lista 'nombrespermitidos' (tabla o array)
-    //   En Supabase, puedes hacer una tabla 'nombrespermitidos' (o un array local).
-    //   Para simplificar, supongamos es una tabla 'nombrespermitidos' con columna 'nombre'.
-    const { data: allowedNames, error: errAllowed } = await supabase
-      .from('nombrespermitidos') // o la tabla que definiste
-      .select('nombre')
-      .eq('nombre', nombrePatreon);
-    if (errAllowed) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Error buscando en nombrespermitidos', details: errAllowed })
-      };
-    }
-    if (!allowedNames || allowedNames.length === 0) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'El Nombre Patreon no está permitido.' })
-      };
-    }
+    // 3) Verificar que nombrePatreon esté en la tabla nombrespermitidos (opcional)
+    //    (Si lo manejas igual que antes)
+    //    Ejemplo:
+    // const { data: allowedNames, error: errAllowed } = await supabase
+    //   .from('nombrespermitidos')
+    //   .select('nombre')
+    //   .eq('nombre', nombrePatreon);
+    // if (errAllowed) {
+    //   return {
+    //     statusCode: 500,
+    //     body: JSON.stringify({ error: 'Error buscando en nombrespermitidos', details: errAllowed })
+    //   };
+    // }
+    // if (!allowedNames || allowedNames.length === 0) {
+    //   return {
+    //     statusCode: 400,
+    //     body: JSON.stringify({ error: 'El Nombre Patreon no está permitido.' })
+    //   };
+    // }
 
     // 4) Verificar que correoUsuario no exista en patreons
     const { data: existing, error: errExisting } = await supabase
@@ -72,6 +71,9 @@ exports.handler = async (event) => {
 
     // 5) Insertar la nueva fila
     const fechaISO = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+    // Si deseas un cutoff_date para "hoy"
+    const cutoffDate = new Date().toISOString().slice(0,10);
+
     const { data: insertData, error: errInsert } = await supabase
       .from('patreons')
       .insert([{
@@ -81,7 +83,8 @@ exports.handler = async (event) => {
         fecha_suscript: fechaISO,
         cuota_mensual: 2,
         videos_procesados: 0,
-        videos_enviados: 0
+        videos_enviados: 0,
+        cutoff_date: cutoffDate // O null, o "9999-12-31", según tu lógica
       }]);
 
     if (errInsert) {
