@@ -162,7 +162,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: 'Registro exitoso en patreons (Supabase)',
+        message: 'Registro exitoso',
         row: inserted
       })
     };
