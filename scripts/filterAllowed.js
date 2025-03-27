@@ -1,11 +1,10 @@
 // scripts/filterAllowed.js
+
 const fs = require('fs');
 const path = require('path');
-const { parse } = require('csv-parse/sync');
-const { stringify } = require('csv-stringify/sync');
+const { createClient } = require('@supabase/supabase-js');
 
-// CSV path
-const CSV_PATH = path.join(__dirname, '..', 'data', 'data.csv');
+// Este script se corre con "node filterAllowed.js changed_files.txt"
 
 (async () => {
   try {
@@ -16,29 +15,51 @@ const CSV_PATH = path.join(__dirname, '..', 'data', 'data.csv');
       process.exit(1);
     }
 
-    // 2) Leer la lista de changed files
+    // 2) Leer la lista de changed files (igual que antes)
     const changedFiles = fs
       .readFileSync(changedFilesPath, 'utf8')
       .split('\n')
       .map(f => f.trim())
       .filter(Boolean);
 
-    // 3) Cargar el CSV en memoria
-    const csvContent = fs.readFileSync(CSV_PATH, 'utf8');
-    let records = parse(csvContent, {
-      columns: true,
-      skip_empty_lines: true
-    });
-    // records será un array de objetos con keys: 
-    // ["mescenas","correo_mescenas","tipo_suscript","fecha_suscript","cuota_mensual","videos_procesados","videos_enviados"]
-
-    // Crear / limpiar approved_files.txt
+    // 2.1) Crear / limpiar approved_files.txt (igual que antes)
     fs.writeFileSync('approved_files.txt', '', 'utf8');
 
-    // Llevaremos la cuenta de cuántos archivos sí fueron aprobados
+    // 2.2) Llevaremos la cuenta de cuántos archivos sí fueron aprobados
     let approvedCount = 0;
 
-    // 4) Recorrer los changedFiles y filtrar
+    // --- Conectar a Supabase ---
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("Faltan credenciales de Supabase (SUPABASE_URL o SUPABASE_ANON_KEY).");
+      process.exit(1);
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    // 3) Cargar los registros desde la tabla patreons en memoria (simulando el "csvContent")
+    console.log("Obteniendo registros de 'patreons'...");
+    const { data: records, error: errSelect } = await supabase
+      .from('patreons')
+      .select('mescenas,correo_mescenas,tipo_suscript,fecha_suscript,cuota_mensual,videos_procesados,videos_enviados');
+
+    if (errSelect) {
+      console.error("Error al obtener registros de 'patreons':", errSelect);
+      process.exit(1);
+    }
+    if (!records) {
+      console.error("No se obtuvieron registros de la tabla 'patreons'.");
+      process.exit(1);
+    }
+
+    // 3.1) Para rastrear cuáles rows se modifican
+    // Agregamos una propiedad "_updated" en memoria
+    for (const r of records) {
+      r._updated = false;
+    }
+
+    // 4) Recorrer los changedFiles y filtrar (igual que antes)
     for (const file of changedFiles) {
       if (!fs.existsSync(file)) {
         console.log(`File ${file} not found, skipping`);
@@ -52,22 +73,32 @@ const CSV_PATH = path.join(__dirname, '..', 'data', 'data.csv');
         continue;
       }
 
-      // 5) Buscar en records dónde correo_mescenas == url (ignorando mayúsculas/minúsculas)
-      const matchingIndex = records.findIndex(r => r.correo_mescenas.trim().toLowerCase() === url.trim().toLowerCase());
+      // 5) Buscar en 'records' dónde correo_mescenas == url (ignorando mayúsc-minúsc)
+      const matchingIndex = records.findIndex(r => 
+        r.correo_mescenas.trim().toLowerCase() === url.trim().toLowerCase()
+      );
+
       if (matchingIndex === -1) {
         console.log(`No mecenas found for ${url}, skipping ${file}`);
         continue;
       }
 
-      // 6) Revisar si (cuota_mensual - videos_enviados) > 0
+      // 6) Revisar si (cuota_mensual - videos_enviados) > 0,
+      //    pero en el script original usabas (cuota - videosProcesados):
+      //    "if ((cuota - videosProcesados) > 0) { ... }"
+      //    Observa que en el original se usaba videos_enviados? O videos_procesados?
+      //    Tu snippet dice: "Si (cuota - videos_procesados) > 0"
+
       const row = records[matchingIndex];
       const cuota = parseInt(row.cuota_mensual, 10) || 0;
-      const videosEnviados = parseInt(row.videos_enviados, 10) || 0;// Si hay errores con la otra parte, ya no lo se, por ahora funciona
       const videosProcesados = parseInt(row.videos_procesados, 10) || 0;
+      // (En tu snippet, "videos_enviados" y "videos_procesados" se mezclan;
+      //  asumo que el check es (cuota_mensual - videos_procesados) > 0)
 
       if ((cuota - videosProcesados) > 0) {
-        // OK: actualizamos videos_procesados + 1
-        records[matchingIndex].videos_procesados = (videosProcesados + 1).toString();
+        // Aumentamos videos_procesados
+        row.videos_procesados = (videosProcesados + 1).toString();
+        row._updated = true; // Marcamos que se cambió
 
         // Añadir el file a 'approved_files.txt'
         fs.appendFileSync('approved_files.txt', `${file}\n`, 'utf8');
@@ -79,19 +110,32 @@ const CSV_PATH = path.join(__dirname, '..', 'data', 'data.csv');
       }
     }
 
-    // 7) Guardar el CSV con videos_procesados actualizado
-    const output = stringify(records, {
-      header: true,
-      columns: Object.keys(records[0])
-    });
-    fs.writeFileSync(CSV_PATH, output, 'utf8');
+    // 7) En vez de reescribir un CSV, actualizamos en Supabase
+    //    Solo los registros que se marcaron con _updated = true
+    let updatesCount = 0;
+    for (const r of records) {
+      if (r._updated) {
+        // Hacemos un update row by row:
+        // "UPDATE patreons SET videos_procesados = r.videos_procesados
+        //  WHERE correo_mescenas = r.correo_mescenas"
+        const { error: errUpdate } = await supabase
+          .from('patreons')
+          .update({ videos_procesados: parseInt(r.videos_procesados, 10) })
+          .eq('correo_mescenas', r.correo_mescenas.trim().toLowerCase());
 
-    console.log("Filtering done. Updated CSV. Approved files in approved_files.txt");
+        if (errUpdate) {
+          console.error(`Error actualizando videos_procesados para ${r.mescenas}:`, errUpdate);
+          // No hacemos exit(1) porque tal vez el resto funcionó
+        } else {
+          updatesCount++;
+        }
+      }
+    }
+
+    console.log(`Filtering done. Approved files in approved_files.txt. Updated rows in Supabase: ${updatesCount}`);
 
     // 8) Exponer approvedCount a GitHub Actions
-    // Guardamos la variable en GITHUB_OUTPUT para poder conditionar pasos posteriores.
     if (process.env.GITHUB_OUTPUT) {
-      // Formato: key=value
       fs.appendFileSync(process.env.GITHUB_OUTPUT, `approved_count=${approvedCount}\n`);
       console.log(`approved_count=${approvedCount} => written to GITHUB_OUTPUT`);
     } else {
@@ -106,7 +150,7 @@ const CSV_PATH = path.join(__dirname, '..', 'data', 'data.csv');
     process.exit(0);
 
   } catch (error) {
-    console.error("Error in filterAllowed.js:", error);
+    console.error("Error in filterAllowed.js (Supabase version):", error);
     process.exit(1);
   }
 })();
