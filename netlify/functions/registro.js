@@ -2,51 +2,61 @@
 const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async (event) => {
+  console.log("=== Registro Function START ===");
+
   try {
-    // SOLO aceptar método POST
+    console.log("HTTP method:", event.httpMethod);
     if (event.httpMethod !== 'POST') {
+      console.log("Method not allowed. Exiting.");
       return {
         statusCode: 405,
         body: JSON.stringify({ error: 'Method Not Allowed' })
       };
     }
 
-    // Parsear el body
+    console.log("Parsing event.body...");
     const body = JSON.parse(event.body);
     const { nombrePatreon, correoUsuario } = body;
+    console.log("nombrePatreon:", nombrePatreon, "| correoUsuario:", correoUsuario);
 
-    // 1) Validar datos básicos
     if (!nombrePatreon || !nombrePatreon.trim()) {
+      console.log("Nombre Patreon vacío");
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'El Nombre Patreon está vacío' })
       };
     }
     if (!correoUsuario || !correoUsuario.trim()) {
+      console.log("Correo vacío");
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'No hay un correo válido' })
       };
     }
 
-    // 2) Conectar a Supabase
+    // Conexión a Supabase
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+    console.log("Verificando credenciales Supabase...");
     if (!supabaseUrl || !supabaseAnonKey) {
+      console.log("Faltan credenciales.");
       return {
         statusCode: 500,
         body: JSON.stringify({ error: 'Faltan credenciales de Supabase en Netlify' })
       };
     }
+    console.log("Creando cliente de supabase...");
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // 3) Buscar el nombrePatreon en "nombrespermitidos" (columna mescenas)
+    // 1) Verificar nombrePatreon en nombrespermitidos
+    console.log("Buscando en nombrespermitidos:", nombrePatreon.trim());
     const { data: allowedRows, error: errAllowed } = await supabase
       .from('nombrespermitidos')
       .select('id, mescenas, status')
       .eq('mescenas', nombrePatreon.trim());
 
     if (errAllowed) {
+      console.log("Error consultando nombrespermitidos:", errAllowed);
       return {
         statusCode: 500,
         body: JSON.stringify({
@@ -55,40 +65,44 @@ exports.handler = async (event) => {
         })
       };
     }
+    console.log("allowedRows:", allowedRows);
     if (!allowedRows || allowedRows.length === 0) {
+      console.log("El Nombre Patreon no está permitido.");
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'El Nombre Patreon no está permitido' })
       };
     }
-    // Si quisieras verificar 'status', podrías revisar allowedRows[0].status
 
-    // 4) Verificar que el correo no exista en "patreons" (columna correo_mescenas)
+    // 2) Verificar correoUsuario en patreons
     const correoLower = correoUsuario.trim().toLowerCase();
+    console.log("Buscando en patreons si existe correo:", correoLower);
     const { data: existing, error: errExisting } = await supabase
       .from('patreons')
       .select('correo_mescenas')
       .eq('correo_mescenas', correoLower);
 
     if (errExisting) {
+      console.log("Error consultando patreons:", errExisting);
       return {
         statusCode: 500,
         body: JSON.stringify({ error: 'Error consultando la tabla patreons', details: errExisting })
       };
     }
+    console.log("existing:", existing);
     if (existing && existing.length > 0) {
+      console.log("El correo ya existe en patreons.");
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'El correo ya existe en patreons' })
       };
     }
 
-    // 5) Insertar el nuevo registro en patreons
-    //    Campos: mescenas, correo_mescenas, tipo_suscript, fecha_suscript, cuota_mensual, videos_procesados, videos_enviados, cutoff_date...
+    // 3) Insertar en patreons
     const fechaISO = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-    // cutoff_date => pon lo que gustes, aquí ejemplo de "9999-12-31"
     const cutoffDate = '9999-12-31';
 
+    console.log("Insertando registro en patreons...");
     const { data: inserted, error: errInsert } = await supabase
       .from('patreons')
       .insert([{
@@ -103,6 +117,7 @@ exports.handler = async (event) => {
       }]);
 
     if (errInsert) {
+      console.log("Error insertando en patreons:", errInsert);
       return {
         statusCode: 500,
         body: JSON.stringify({
@@ -112,7 +127,8 @@ exports.handler = async (event) => {
       };
     }
 
-    // 6) Respuesta de éxito
+    console.log("Registro exitoso en patreons. Inserted:", inserted);
+    console.log("=== Registro Function END ===");
     return {
       statusCode: 200,
       body: JSON.stringify({

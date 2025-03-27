@@ -622,25 +622,35 @@ function showSuccessMessage() {
   }, 5000);
 }
 
-// ... el resto de tu main.js ...
-// Referencias
-// const nombrePatreonInput = document.getElementById("nombrePatreonInput");
-// const registrarCorreoBtn = document.getElementById("registrarCorreoBtn");
+// Asegúrate de que estas referencias no estén comentadas y existan en el DOM:
+const nombrePatreonInput = document.getElementById("nombrePatreonInput");
+const registrarCorreoBtn = document.getElementById("registrarCorreoBtn");
+
 registrarCorreoBtn.addEventListener("click", () => {
   const nombrePatreon = nombrePatreonInput.value.trim();
   const correoUsuario = window.loggedInUserEmail || "";
+
+  console.log("Registrando correo con los siguientes datos:", { nombrePatreon, correoUsuario });
 
   fetch("/.netlify/functions/registro", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ nombrePatreon, correoUsuario })
   })
-  .then(res => res.json())
-  .then(data => {
-    if (data.error) {
-      alert("Error: " + data.error);
-    } else {
-      alert("Registrado: " + data.message);
-    }
-  });
+    .then(res => {
+      console.log("Respuesta HTTP:", res.status);
+      return res.json();
+    })
+    .then(data => {
+      console.log("Respuesta de registro:", data);
+      if (data.error) {
+        alert("Error: " + data.error);
+      } else {
+        alert("Registrado: " + data.message);
+      }
+    })
+    .catch(err => {
+      console.error("Error en la petición:", err);
+      alert("Ocurrió un error inesperado al registrar: " + err);
+    });
 });
