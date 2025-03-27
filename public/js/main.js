@@ -41,6 +41,9 @@ const sendAllBtn = document.getElementById("sendAllBtn");
 const scenesContainer = document.getElementById("scenesContainer");
 const logoutBtn = document.getElementById("logoutBtn");
 
+// NUEVO: Referencia para mostrar contador
+const charCounter = document.getElementById("charCounter");
+
 // Evento de logout
 logoutBtn.addEventListener("click", () => {
   // “Cerrar sesión” en tu app (no cierra la sesión global de Google)
@@ -50,7 +53,69 @@ logoutBtn.addEventListener("click", () => {
 });
 
 /**********************************************
- * 4. Crear una nueva Escena
+ * 4. Límite de caracteres
+ **********************************************/
+const MAX_CHARS = 400;
+let totalCharacters = 0;
+
+/**
+ * Recalcula la suma de caracteres en TODOS los textarea
+ * y actualiza interfaz y habilita/deshabilita botones.
+ */
+function updateCharacterCount() {
+  const allTextareas = document.querySelectorAll("textarea");
+  let sum = 0;
+
+  allTextareas.forEach((ta) => {
+    sum += ta.value.length;
+  });
+
+  totalCharacters = sum;
+  
+  // Actualiza el contador en pantalla
+  if (charCounter) {
+    charCounter.textContent = `${totalCharacters} / ${MAX_CHARS}`;
+  }
+
+  // Si llegamos o excedemos 400, deshabilitamos botones de agregar
+  // Caso contrario, volvemos a habilitar
+  const shouldDisable = (totalCharacters >= MAX_CHARS);
+
+  addSceneBtn.disabled = shouldDisable;
+  
+  // Todos los botones de diálogo
+  const allDialogueAddBtns = document.querySelectorAll(".add-dialogue-btn");
+  allDialogueAddBtns.forEach(btn => {
+    btn.disabled = shouldDisable;
+  });
+}
+
+/**
+ * Manejador de evento 'input' en cada textarea:
+ * - Si al escribir pasamos de 400, se trunca lo escrito.
+ * - Luego se llama a updateCharacterCount().
+ */
+function handleTextareaInput(e) {
+  const textarea = e.target;
+
+  // Si con lo que acaba de escribir ya se pasó de 400, se trunca
+  // (pero primero recalculamos con el texto recién agregado)
+  updateCharacterCount();
+  
+  if (totalCharacters > MAX_CHARS) {
+    // Número de caracteres que sobra
+    const overflow = totalCharacters - MAX_CHARS;
+    // Truncamos el texto en el textarea actual
+    const newValue = textarea.value.slice(0, textarea.value.length - overflow);
+    textarea.value = newValue;
+
+    // Volvemos a recalcular
+    updateCharacterCount();
+  }
+}
+
+/**********************************************
+ * 5. Crear una nueva Escena
  **********************************************/
 function createSceneBlock(sceneIndex) {
   const sceneBlock = document.createElement("div");
@@ -73,7 +138,7 @@ function createSceneBlock(sceneIndex) {
     option.text = place;
     placeSelect.appendChild(option);
   });
-  // Seleccionar el primer lugar por defecto
+  // Seleccionar el primer lugar por defecto (opcional)
   if (PLACES_CATALOG.length > 0) {
     placeSelect.value = PLACES_CATALOG[0];
   }
@@ -85,7 +150,7 @@ function createSceneBlock(sceneIndex) {
   dialoguesContainer.id = `dialoguesContainer_${sceneIndex}`;
   sceneBlock.appendChild(dialoguesContainer);
 
-  // Botón circular para agregar diálogos
+  // Botón para agregar diálogos
   const addDialogueBtn = document.createElement("button");
   addDialogueBtn.type = "button";
   addDialogueBtn.classList.add("add-dialogue-btn");
@@ -95,13 +160,14 @@ function createSceneBlock(sceneIndex) {
   });
   sceneBlock.appendChild(addDialogueBtn);
 
-  // Botón de eliminar escena (bote de basura)
+  // Botón de eliminar escena
   const deleteSceneBtn = document.createElement("button");
   deleteSceneBtn.type = "button";
   deleteSceneBtn.classList.add("delete-scene-btn");
   deleteSceneBtn.innerText = "🗑️";
   deleteSceneBtn.addEventListener("click", () => {
     scenesContainer.removeChild(sceneBlock);
+    updateCharacterCount(); // Recalcular al eliminar toda la escena
   });
   sceneBlock.appendChild(deleteSceneBtn);
 
@@ -109,9 +175,8 @@ function createSceneBlock(sceneIndex) {
 }
 
 /**********************************************
- * 5. Crear un nuevo Diálogo dentro de una Escena
+ * 6. Crear un nuevo Diálogo dentro de una Escena
  **********************************************/
-
 function createDialogueBlock(sceneIndex, container) {
   // Div principal del diálogo
   const dialogueGroup = document.createElement("div");
@@ -141,7 +206,7 @@ function createDialogueBlock(sceneIndex, container) {
   characterImg.style.border = "3px solid #ccc";
   characterImg.style.marginBottom = "10px";
 
-  // Menú desplegable para elegir otro personaje
+  // Menú desplegable para elegir personaje
   const characterMenu = document.createElement("div");
   characterMenu.style.display = "none";
   characterMenu.style.position = "absolute";
@@ -151,7 +216,7 @@ function createDialogueBlock(sceneIndex, container) {
   characterMenu.style.borderRadius = "6px";
   characterMenu.style.zIndex = "999";
 
-  // Input hidden para almacenar el nombre del personaje seleccionado
+  // Input hidden para almacenar nombre del personaje
   const hiddenCharacterInput = document.createElement("input");
   hiddenCharacterInput.type = "hidden";
   hiddenCharacterInput.name = `character_${sceneIndex}[]`;
@@ -163,12 +228,13 @@ function createDialogueBlock(sceneIndex, container) {
   charImageWrapper.appendChild(characterImg);
   charImageWrapper.appendChild(characterMenu);
 
-  // Al hacer clic en la imagen, se muestra u oculta el menú
+  // Evento para mostrar/ocultar menú
   characterImg.addEventListener("click", () => {
-    characterMenu.style.display = (characterMenu.style.display === "none") ? "block" : "none";
+    characterMenu.style.display =
+      characterMenu.style.display === "none" ? "block" : "none";
   });
 
-  // Rellenar el menú con las imágenes de los personajes
+  // Llenamos el menú con las imágenes de los personajes
   CHARACTERS_WITH_IMAGES.forEach((charObj, idx) => {
     const charOptionImg = document.createElement("img");
     charOptionImg.src = charObj.image;
@@ -192,7 +258,7 @@ function createDialogueBlock(sceneIndex, container) {
   characterColumn.appendChild(charImageWrapper);
   characterColumn.appendChild(hiddenCharacterInput);
 
-  // Dropdown para Emoción, justo debajo de la imagen
+  // Dropdown Emoción
   const emoSelect = document.createElement("select");
   emoSelect.name = `emotion_${sceneIndex}[]`;
   EMOTIONS_CATALOG.forEach((emo) => {
@@ -222,32 +288,34 @@ function createDialogueBlock(sceneIndex, container) {
   dialogueInput.style.width = "100%";
   dialogueInput.style.boxSizing = "border-box";
   dialogueInput.style.marginBottom = "10px";
+
+  // Nuevo: listener para contar y truncar
+  dialogueInput.addEventListener("input", handleTextareaInput);
+
   contentColumn.appendChild(dialogueInput);
 
-  // Dropdown de Onomatopeyas, justo debajo del textarea
-  // ----- NUEVO: LISTA DE ONOMATOPEYAS (colocada debajo del textarea)
+  // Dropdown de Onomatopeyas
   const onomaSelect = document.createElement("select");
   onomaSelect.name = `onomatopeia_${sceneIndex}[]`;
 
-  // Opción por defecto: "Agregar onomatopeya" (valor vacío)
+  // Opción por defecto
   const defaultOption = document.createElement("option");
   defaultOption.value = "";
   defaultOption.text = "Agregar onomatopeya";
   onomaSelect.appendChild(defaultOption);
 
-  // Agregar las opciones reales del catálogo
+  // Opciones reales
   ONOMATOPEIAS_CATALOG.forEach((ono) => {
     const option = document.createElement("option");
     option.value = ono;
     option.text = ono;
     onomaSelect.appendChild(option);
-  }
-  );
+  });
   contentColumn.appendChild(onomaSelect);
 
   dialogueGroup.appendChild(contentColumn);
 
-  // Botón para eliminar este diálogo (alineado a la derecha)
+  // Botón eliminar diálogo
   const deleteDialogueBtn = document.createElement("button");
   deleteDialogueBtn.type = "button";
   deleteDialogueBtn.classList.add("delete-dialogue-btn");
@@ -256,237 +324,37 @@ function createDialogueBlock(sceneIndex, container) {
   deleteDialogueBtn.style.marginTop = "5px";
   deleteDialogueBtn.addEventListener("click", () => {
     container.removeChild(dialogueGroup);
+    updateCharacterCount(); // Recalcular tras eliminar
   });
   dialogueGroup.appendChild(deleteDialogueBtn);
 
   container.appendChild(dialogueGroup);
+
+  // Al crear un diálogo, recalculamos el contador
+  updateCharacterCount();
 }
 
-
-// function createDialogueBlock(sceneIndex, container) {
-//   // Div principal de cada diálogo
-//   const dialogueGroup = document.createElement("div");
-//   dialogueGroup.classList.add("dialogue-group");
-
-//   // Usaremos display flex para colocar la "columna de personaje" a la izquierda y el textarea a la derecha
-//   dialogueGroup.style.display = "flex";
-//   dialogueGroup.style.alignItems = "flex-start";
-
-//   // Contenedor de la columna izquierda (imagen + menú + emoción)
-//   const characterColumn = document.createElement("div");
-//   characterColumn.style.display = "flex";
-//   characterColumn.style.flexDirection = "column";
-//   characterColumn.style.alignItems = "center";
-//   characterColumn.style.marginRight = "20px";
-
-//   // ========== PERSONAJE CON IMAGEN ==========
-//   // Elegimos el primer personaje por defecto
-//   let currentCharacterIndex = 0;
-//   const currentChar = CHARACTERS_WITH_IMAGES[currentCharacterIndex];
-
-//   // Imagen principal del personaje
-//   const characterImg = document.createElement("img");
-//   characterImg.src = currentChar.image;
-//   characterImg.alt = currentChar.name;
-//   characterImg.style.width = "80px";
-//   characterImg.style.height = "80px";
-//   characterImg.style.objectFit = "cover";
-//   characterImg.style.borderRadius = "50%";
-//   characterImg.style.cursor = "pointer";
-//   characterImg.style.border = "3px solid #ccc";
-//   characterImg.style.marginBottom = "10px";
-
-//   // Menú desplegable (galería de personajes)
-//   const characterMenu = document.createElement("div");
-//   characterMenu.style.display = "none";
-//   characterMenu.style.position = "absolute";
-//   characterMenu.style.backgroundColor = "#fff";
-//   characterMenu.style.border = "1px solid #ccc";
-//   characterMenu.style.padding = "5px";
-//   characterMenu.style.borderRadius = "6px";
-//   characterMenu.style.zIndex = "999";
-
-//   // Input hidden para guardar el nombre del personaje seleccionado
-//   const hiddenCharacterInput = document.createElement("input");
-//   hiddenCharacterInput.type = "hidden";
-//   hiddenCharacterInput.name = `character_${sceneIndex}[]`;
-//   hiddenCharacterInput.value = currentChar.name;
-
-//   // Para posicionar el menú debajo de la imagen, anidamos un contenedor con position relative
-//   const charImageWrapper = document.createElement("div");
-//   charImageWrapper.style.position = "relative";
-//   charImageWrapper.appendChild(characterImg);
-//   charImageWrapper.appendChild(characterMenu);
-
-//   // Al hacer clic en la imagen, mostramos u ocultamos el menú
-//   characterImg.addEventListener("click", () => {
-//     if (characterMenu.style.display === "none") {
-//       characterMenu.style.display = "block";
-//     } else {
-//       characterMenu.style.display = "none";
-//     }
-//   });
-
-//   // Llenamos el menú con las otras imágenes
-//   CHARACTERS_WITH_IMAGES.forEach((charObj, idx) => {
-//     const charOptionImg = document.createElement("img");
-//     charOptionImg.src = charObj.image;
-//     charOptionImg.alt = charObj.name;
-//     charOptionImg.style.width = "50px";
-//     charOptionImg.style.height = "50px";
-//     charOptionImg.style.objectFit = "cover";
-//     charOptionImg.style.borderRadius = "50%";
-//     charOptionImg.style.cursor = "pointer";
-//     charOptionImg.style.margin = "5px";
-
-//     // Al hacer clic en una miniatura, actualizamos el personaje principal
-//     charOptionImg.addEventListener("click", () => {
-//       characterImg.src = charObj.image;
-//       characterImg.alt = charObj.name;
-//       hiddenCharacterInput.value = charObj.name;
-//       currentCharacterIndex = idx;
-//       characterMenu.style.display = "none";
-//     });
-
-//     characterMenu.appendChild(charOptionImg);
-//   });
-
-//   characterColumn.appendChild(charImageWrapper);
-//   characterColumn.appendChild(hiddenCharacterInput);
-
-//   // ========== EMOCIÓN (debajo de la imagen) ==========
-//   const emoSelect = document.createElement("select");
-//   emoSelect.name = `emotion_${sceneIndex}[]`;
-//   EMOTIONS_CATALOG.forEach((emo) => {
-//     const option = document.createElement("option");
-//     option.value = emo;
-//     option.text = emo;
-//     emoSelect.appendChild(option);
-//   });
-//   // Seleccionar la primera emoción por defecto
-//   if (EMOTIONS_CATALOG.length > 0) {
-//     emoSelect.value = EMOTIONS_CATALOG[0];
-//   }
-//   characterColumn.appendChild(emoSelect);
-
-//   // Agregamos la columna de personaje al diálogo
-//   dialogueGroup.appendChild(characterColumn);
-
-//   // ========== TEXTAREA (derecha) ==========
-//   const dialogueInput = document.createElement("textarea");
-//   dialogueInput.name = `dialogueText_${sceneIndex}[]`;
-//   dialogueInput.rows = 3;
-//   dialogueInput.placeholder = "Escribe aquí lo que dice el personaje...";
-//   // Ancho flexible
-//   dialogueInput.style.flex = "1";
-//   dialogueInput.style.width = "100%";
-//   dialogueInput.style.marginRight = "10px";
-//   dialogueGroup.appendChild(dialogueInput);
-
-//   // ========== BOTÓN ELIMINAR DIÁLOGO ==========
-//   const deleteDialogueBtn = document.createElement("button");
-//   deleteDialogueBtn.type = "button";
-//   deleteDialogueBtn.classList.add("delete-dialogue-btn");
-//   deleteDialogueBtn.innerText = "🗑️";
-//   deleteDialogueBtn.style.marginTop = "5px";
-//   deleteDialogueBtn.addEventListener("click", () => {
-//     container.removeChild(dialogueGroup);
-//   });
-//   dialogueGroup.appendChild(deleteDialogueBtn);
-
-//   // Finalmente, agregamos el 'dialogueGroup' al container
-//   container.appendChild(dialogueGroup);
-// }
-
-
 /**********************************************
- * 6. Agregar la primera escena al cargar (opcional)
+ * 7. Agregar la primera escena al cargar (opcional)
  **********************************************/
 document.addEventListener("DOMContentLoaded", () => {
   addSceneBtn.click();
 });
 
 /**********************************************
- * 7. Evento: Agregar Nueva Escena
+ * 8. Evento: Agregar Nueva Escena
  **********************************************/
 addSceneBtn.addEventListener("click", () => {
   const sceneCount = document.querySelectorAll(".scene-block").length;
   const newScene = createSceneBlock(sceneCount);
   scenesContainer.appendChild(newScene);
+  // Recalc después de agregar
+  updateCharacterCount();
 });
 
 /**********************************************
- * 8. Evento: "Enviar" Todo
- *    - Recorre las escenas/diálogos
- *    - Manda el contenido a GitHub (sendDialogToGitHub)
+ * 9. Evento: "Enviar" Todo
  **********************************************/
-
-
-/**********************************************
- * 9. Función para enviar el JSON a Netlify (serverless)
- **********************************************/
-function sendDialogToGitHub(finalMessage) {
-  const debugInfo = document.getElementById("debugInfo");
-
-  // Email del usuario
-  const usuario = window.loggedInUserEmail || "usuario_desconocido";
-  const momento = new Date().toISOString();
-
-  const payload = {
-    usuario,
-    momento,
-    contenido: finalMessage,
-    otros: {
-      ip: "127.0.0.1",
-      note: "Información adicional"
-    }
-  };
-
-  debugInfo.innerText = "Enviando payload:\n\n" + JSON.stringify(payload, null, 2);
-
-  fetch("/.netlify/functions/saveDialog", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      debugInfo.innerText += "\n\nRespuesta:\n\n" + JSON.stringify(data, null, 2);
-      if (data.error) {
-        alert("Hubo un error guardando el archivo: " + data.error);
-        if (data.details) {
-          debugInfo.innerText += "\n\nDetalles del error:\n" + data.details;
-        }
-      } else {
-        alert("¡Tu archivo JSON fue guardado con éxito en GitHub!");
-      }
-    })
-    .catch((err) => {
-      console.error("Error en la petición:", err);
-      debugInfo.innerText += "\n\nError en la petición:\n" + err;
-      alert("Error desconocido al guardar.");
-    });
-}
-
-
-/**********************************************
- * 1) Referencias a elementos del popup y overlay
- **********************************************/
-const confirmationOverlay = document.getElementById("confirmationOverlay");
-const confirmationMessage = document.getElementById("confirmationMessage");
-const confirmSendBtn = document.getElementById("confirmSendBtn");
-const cancelSendBtn = document.getElementById("cancelSendBtn");
-
-const successOverlay = document.getElementById("successOverlay");
-const successMessage = document.getElementById("successMessage");
-// Para almacenar el mensaje pendiente
-let pendingMessage = "";
-
-/**********************************************
- * 2) Botón "Enviar" (dos pasos)
- **********************************************/
-
-// Parte de tu "Enviar" (dos pasos)
 sendAllBtn.addEventListener("click", () => {
   let finalMessage = "";
   const allScenes = document.querySelectorAll(".scene-block");
@@ -514,7 +382,7 @@ sendAllBtn.addEventListener("click", () => {
 
       const dialogueInput = dg.querySelector(`textarea[name="dialogueText_${index}[]"]`);
       const dialogueValue = dialogueInput?.value.trim() || "Diálogo vacío";
-      
+
       // Onomatopeya
       const onomaSelect = dg.querySelector(`select[name="onomatopeia_${index}[]"]`);
       const onomaValue = onomaSelect ? onomaSelect.value.trim() : "";
@@ -538,30 +406,27 @@ sendAllBtn.addEventListener("click", () => {
   confirmationOverlay.style.display = "flex"; // Muestra el popup
 });
 
-
 /**********************************************
- * 3) Botón "Confirmar": envía y cierra popup
+ * 10. Popups, confirmación y envío a GitHub
  **********************************************/
-confirmSendBtn.addEventListener("click", () => {
-  // Cerrar popup de confirmación
-  confirmationOverlay.style.display = "none";
+const confirmationOverlay = document.getElementById("confirmationOverlay");
+const confirmationMessage = document.getElementById("confirmationMessage");
+const confirmSendBtn = document.getElementById("confirmSendBtn");
+const cancelSendBtn = document.getElementById("cancelSendBtn");
 
-  // Llamar a la función real de envío
+const successOverlay = document.getElementById("successOverlay");
+const successMessage = document.getElementById("successMessage");
+let pendingMessage = ""; // almacenar el mensaje pendiente
+
+confirmSendBtn.addEventListener("click", () => {
+  confirmationOverlay.style.display = "none";
   sendDialogToGitHub(pendingMessage);
 });
 
-/**********************************************
- * 4) Botón "Regresar": cierra popup sin enviar
- **********************************************/
 cancelSendBtn.addEventListener("click", () => {
   confirmationOverlay.style.display = "none";
 });
 
-
-/**********************************************
- * 5) Función de envío a GitHub
- *    Al terminar con éxito, muestra el successOverlay.
- **********************************************/
 function sendDialogToGitHub(finalMessage) {
   const debugInfo = document.getElementById("debugInfo");
   const usuario = window.loggedInUserEmail || "usuario_desconocido";
@@ -599,7 +464,6 @@ function sendDialogToGitHub(finalMessage) {
           console.error("Detalles del error:", data.details);
         }
       } else {
-        // Mensaje de éxito
         showSuccessMessage();
       }
     })
@@ -609,9 +473,6 @@ function sendDialogToGitHub(finalMessage) {
     });
 }
 
-/**********************************************
- * 6) Mostrar mensaje de exito 5s => cerrar
- **********************************************/
 function showSuccessMessage() {
   successMessage.textContent = "Mensaje Enviado, gracias por confiar en Momentito Cafecito, te llegará un correo en ~24 hrs con tu video.";
   successOverlay.style.display = "flex";
@@ -622,7 +483,9 @@ function showSuccessMessage() {
   }, 5000);
 }
 
-// Asegúrate de que estas referencias no estén comentadas y existan en el DOM:
+/**********************************************
+ * 11. Registro de Correo Patreon
+ **********************************************/
 const nombrePatreonInput = document.getElementById("nombrePatreonInput");
 const registrarCorreoBtn = document.getElementById("registrarCorreoBtn");
 
